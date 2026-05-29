@@ -372,7 +372,7 @@ func (b *Backend) FetchPreparation(sessionID string, path string, overrides api.
 	return wrapWebResult(b.core.FetchPreparationPreview(progressCtx, req))
 }
 
-func (b *Backend) FetchTrackerDryRun(sessionID string, path string, overrides api.ExternalIDOverrides, nameOverrides api.ReleaseNameOverrides, trackersList []string, ignoreRuleFailures bool, ignoreDupesFor []string, questionnaireAnswers map[string]map[string]string, descriptionGroups []api.DescriptionBuilderGroup, debug bool, runLogLevel string) (api.TrackerDryRunPreview, error) {
+func (b *Backend) FetchTrackerDryRun(sessionID string, path string, overrides api.ExternalIDOverrides, nameOverrides api.ReleaseNameOverrides, trackersList []string, ignoreDupesFor []string, questionnaireAnswers map[string]map[string]string, descriptionGroups []api.DescriptionBuilderGroup, debug bool, runLogLevel string) (api.TrackerDryRunPreview, error) {
 	if err := b.requireCore(); err != nil {
 		return api.TrackerDryRunPreview{}, err
 	}
@@ -396,7 +396,7 @@ func (b *Backend) FetchTrackerDryRun(sessionID string, path string, overrides ap
 		DescriptionGroups:           api.CloneDescriptionBuilderGroups(descriptionGroups),
 		Trackers:                    append([]string{}, trackersList...),
 		IgnoreDupesFor:              normalizeTrackerList(ignoreDupesFor),
-		IgnoreTrackerRuleFailures:   ignoreRuleFailures,
+		IgnoreTrackerRuleFailures:   false,
 		Options:                     buildRunUploadOptions(b.cfg, runOpts),
 		ExternalIDOverrides:         overrides,
 		ReleaseNameOverrides:        nameOverrides,
@@ -406,7 +406,10 @@ func (b *Backend) FetchTrackerDryRun(sessionID string, path string, overrides ap
 	if err := guishared.SeedRunCorePreparedMeta(ctx, b.core, runCore, req); err != nil {
 		return api.TrackerDryRunPreview{}, fmt.Errorf("web: %w", err)
 	}
-	progressCtx := bdinfo.WithProgressReporter(ctx, func(line string) {
+	progressCtx := api.WithUploadProgressReporter(ctx, func(update api.UploadProgressUpdate) {
+		b.hub.Emit(sessionID, trackerUploadProgressEvent, update)
+	})
+	progressCtx = bdinfo.WithProgressReporter(progressCtx, func(line string) {
 		if strings.TrimSpace(line) == "" {
 			return
 		}
@@ -943,7 +946,7 @@ func (b *Backend) GetLogExclusions() ([]string, error) {
 	err := config.LoadSectionFromDatabase(context.Background(), "log_exclusions", &exclusions, b.repo)
 	if err != nil {
 		if errorsIsNotFound(err) {
-			return nil, nil
+			return []string{}, nil
 		}
 		return nil, fmt.Errorf("web: %w", err)
 	}

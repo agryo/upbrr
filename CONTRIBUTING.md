@@ -26,8 +26,8 @@ Install the following on your machine:
 - [GNU Make](https://www.gnu.org/software/make/) — top-level shortcuts for builds, checks, formatting, and hooks
 - [golangci-lint](https://golangci-lint.run/) — used by hooks and CI
 - [Lefthook](https://github.com/evilmartians/lefthook) — git hooks runner (see [Git hooks](#git-hooks-lefthook))
-- [Wails CLI](https://wails.io/) `v2.10.1` for desktop builds
-  - Install with `go install github.com/wailsapp/wails/v2/cmd/wails@v2.10.1`
+- [Wails CLI](https://wails.io/) `v2.12.0` for desktop builds
+  - Build scripts invoke `go run github.com/wailsapp/wails/v2/cmd/wails@v2.12.0`
 
 On Linux, Wails builds also need GTK/WebKit development packages. The full list is in [`.github/workflows/build-binaries.yml`](./.github/workflows/build-binaries.yml) — key packages are `build-essential`, `libgtk-3-dev`, `libwebkit2gtk-4.0-dev` (or `4.1-dev`), `libglib2.0-dev`, and `pkg-config`.
 
@@ -133,6 +133,17 @@ make test-frontend     # ESLint, dead-code, typecheck, Vitest, Prettier
 # CSS changes:
 pnpm --dir gui/frontend run lint:style
 ```
+
+For embedded web visual checks, test the embedded build rather than the Vite-only server. Rebuild the frontend, sync it into embedded assets, rebuild the CLI, then run the auth-disabled embedded server on the main port:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/build.ps1
+.\dist\upbrr.exe serve --dev-no-auth
+```
+
+Use `http://localhost:7480` for Playwright or browser automation. Avoid `5173` for embedded parity checks; stale embedded assets can otherwise hide or misrepresent frontend changes.
+
+Stop the embedded server after inspection so later runs do not reuse an old process.
 
 ### Backend
 
