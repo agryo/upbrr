@@ -60,10 +60,17 @@ jobs:
 
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
-      - name: Download release artifacts
+      - name: Download CLI artifacts
         uses: actions/download-artifact@v5
         with:
           path: release-artifacts
+          pattern: cli-*
+
+      - name: Download GUI artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: release-artifacts
+          pattern: gui-*
 
       - name: Publish release assets
         shell: bash
