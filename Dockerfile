@@ -5,6 +5,8 @@ ARG TARGETPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
 ARG TARGETVARIANT
+ARG VERSION=dev
+ARG BUILD_ID=
 
 FROM --platform=$BUILDPLATFORM node:20-bookworm AS frontend
 
@@ -16,7 +18,7 @@ RUN corepack enable && pnpm install --frozen-lockfile
 COPY gui/frontend/ ./
 RUN pnpm run build
 
-FROM --platform=$BUILDPLATFORM golang:1.26.3-bookworm AS cli-builder
+FROM --platform=$BUILDPLATFORM golang:1.26.4-bookworm AS cli-builder
 
 WORKDIR /src
 
@@ -29,6 +31,8 @@ COPY . .
 ARG TARGETOS
 ARG TARGETARCH
 ARG TARGETVARIANT
+ARG VERSION=dev
+ARG BUILD_ID=
 
 RUN --mount=type=cache,target=/root/.cache/go-build \
         set -eu; \
@@ -37,11 +41,14 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
             goarm="${TARGETVARIANT#v}"; \
         fi; \
         CGO_ENABLED=0 GOOS="$TARGETOS" GOARCH="$TARGETARCH" GOARM="$goarm" \
-            go build -trimpath -ldflags="-s -w" -o /out/upbrr ./cmd/upbrr
+            go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.buildIdentifier=${BUILD_ID}" -o /out/upbrr ./cmd/upbrr
 
-FROM golang:1.26.3-bookworm AS gui-builder
+FROM golang:1.26.4-bookworm AS gui-builder
 
 WORKDIR /src
+
+ARG VERSION=dev
+ARG BUILD_ID=
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -66,7 +73,7 @@ COPY . .
 COPY --from=frontend /src/gui/frontend/dist ./gui/frontend/dist
 
 RUN --mount=type=cache,target=/root/.cache/go-build \
-        go build -trimpath -ldflags="-s -w" -o /out/upbrr-gui ./gui
+        go build -tags webkit2_41 -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.buildIdentifier=${BUILD_ID}" -o /out/upbrr-gui ./gui
 
 FROM debian:bookworm-slim
 
