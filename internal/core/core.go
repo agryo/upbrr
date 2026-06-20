@@ -2329,12 +2329,13 @@ func (c *Core) FetchDescriptionBuilderPreview(ctx context.Context, req api.Reque
 		c.logger.Debugf("core: description builder explicit trackers resolved empty source=%s", meta.SourcePath)
 		return api.DescriptionBuilderPreview{SourcePath: meta.SourcePath}, nil
 	}
-	if storePreparedCache {
-		c.storeDupeCache(meta.SourcePath, overrideSignature(meta.ExternalIDOverrides, meta.ReleaseNameOverrides, meta.MetadataOverrides, meta.TrackerConfigOverrides, meta.TrackerSiteOverrides, meta.ClientOverrides, meta.TorrentOverrides, meta.ImageHostOverrides, meta.ScreenshotOverrides), meta)
-	}
-	meta, err = c.ensureDescriptionBuilderMetadata(ctx, req, uniquePaths[0], meta)
+	needsDescriptionMetadata := c.services.Metadata != nil && descriptionBuilderNeedsExternalMetadata(c.cfg, meta, resolvedTrackers)
+	meta, err = c.ensureDescriptionBuilderMetadata(ctx, req, uniquePaths[0], meta, resolvedTrackers)
 	if err != nil {
 		return api.DescriptionBuilderPreview{}, err
+	}
+	if storePreparedCache && !needsDescriptionMetadata {
+		c.storeDescriptionBuilderPreparedCache(req, uniquePaths[0], meta)
 	}
 
 	prep, err := c.services.Trackers.BuildPreparation(ctx, meta, resolvedTrackers)
@@ -2399,13 +2400,26 @@ func buildDescriptionBuilderGroup(entry api.PreparationDescription, overrideByGr
 	}
 }
 
-func (c *Core) ensureDescriptionBuilderMetadata(ctx context.Context, req api.Request, path string, meta api.PreparedMetadata) (api.PreparedMetadata, error) {
-	if c.services.Metadata == nil || !descriptionBuilderNeedsExternalMetadata(c.cfg, meta) {
+// ensureDescriptionBuilderMetadata refreshes missing external metadata before
+// tracker description preparation, using the resolved tracker set for localized
+// pt-BR refreshes while preserving the original tracker list on returned
+// metadata. Cacheable GUI refreshes are stored as request-refreshed entries.
+func (c *Core) ensureDescriptionBuilderMetadata(ctx context.Context, req api.Request, path string, meta api.PreparedMetadata, resolvedTrackers []string) (api.PreparedMetadata, error) {
+	if c.services.Metadata == nil || !descriptionBuilderNeedsExternalMetadata(c.cfg, meta, resolvedTrackers) {
 		return meta, nil
 	}
-	resolved, err := c.services.Metadata.ResolveExternalIDs(ctx, meta)
+	resolveMeta := meta
+	restoreTrackers := false
+	if descriptionBuilderTrackersNeedPTBR(resolvedTrackers) && !descriptionBuilderTrackersNeedPTBR(resolveMeta.Trackers) {
+		resolveMeta.Trackers = append([]string{}, resolvedTrackers...)
+		restoreTrackers = true
+	}
+	resolved, err := c.services.Metadata.ResolveExternalIDs(ctx, resolveMeta)
 	if err != nil {
 		return api.PreparedMetadata{}, fmt.Errorf("core: %w", err)
+	}
+	if restoreTrackers {
+		resolved.Trackers = append([]string{}, meta.Trackers...)
 	}
 	if req.Mode == api.ModeGUI && cacheableGUIPreparedMetaRequest(req) {
 		overrides := mergeExternalIDOverrides(req.ExternalIDOverrides, resolveExternalIDSelection(req.ExternalIDSelections, path))
@@ -2415,7 +2429,20 @@ func (c *Core) ensureDescriptionBuilderMetadata(ctx context.Context, req api.Req
 	return resolved, nil
 }
 
-func descriptionBuilderNeedsExternalMetadata(cfg config.Config, meta api.PreparedMetadata) bool {
+// storeDescriptionBuilderPreparedCache stores cacheable GUI description-builder
+// metadata that did not require an external metadata refresh.
+func (c *Core) storeDescriptionBuilderPreparedCache(req api.Request, path string, meta api.PreparedMetadata) {
+	if req.Mode != api.ModeGUI || !cacheableGUIPreparedMetaRequest(req) {
+		return
+	}
+	overrides := mergeExternalIDOverrides(req.ExternalIDOverrides, resolveExternalIDSelection(req.ExternalIDSelections, path))
+	signature := overrideSignature(overrides, req.ReleaseNameOverrides, req.MetadataOverrides, req.TrackerConfigOverrides, req.TrackerSiteOverrides, req.ClientOverrides, req.TorrentOverrides, req.ImageHostOverrides, req.ScreenshotOverrides)
+	c.storeDupeCache(path, signature, meta)
+}
+
+// descriptionBuilderNeedsExternalMetadata reports whether tracker description
+// preparation needs metadata not present on the current prepared metadata.
+func descriptionBuilderNeedsExternalMetadata(cfg config.Config, meta api.PreparedMetadata, resolvedTrackers []string) bool {
 	if strings.TrimSpace(meta.SourcePath) == "" {
 		return false
 	}
@@ -2424,9 +2451,32 @@ func descriptionBuilderNeedsExternalMetadata(cfg config.Config, meta api.Prepare
 			return true
 		}
 	}
+	if descriptionBuilderNeedsPTBRMetadata(meta, resolvedTrackers) {
+		return true
+	}
 	return cfg.Description.EpisodeOverview && strings.TrimSpace(meta.EpisodeOverview) == "" && descriptionBuilderEpisodeLike(meta)
 }
 
+// descriptionBuilderNeedsPTBRMetadata reports whether localized tracker
+// descriptions need a missing pt-BR TMDB metadata entry.
+func descriptionBuilderNeedsPTBRMetadata(meta api.PreparedMetadata, resolvedTrackers []string) bool {
+	if !descriptionBuilderTrackersNeedPTBR(resolvedTrackers) && !descriptionBuilderTrackersNeedPTBR(meta.Trackers) && !descriptionBuilderTrackersNeedPTBR(meta.MatchedTrackers) {
+		return false
+	}
+	if meta.ExternalMetadata.TMDB == nil || meta.ExternalMetadata.TMDB.Localized == nil {
+		return true
+	}
+	localized, ok := meta.ExternalMetadata.TMDB.Localized["pt-BR"]
+	return !ok || !localizedPTBRComplete(meta, localized)
+}
+
+// descriptionBuilderTrackersNeedPTBR reports whether any tracker consumes pt-BR localized metadata.
+func descriptionBuilderTrackersNeedPTBR(trackersList []string) bool {
+	return trackers.AnyNeedsPTBRLocalizedMetadata(trackersList)
+}
+
+// descriptionBuilderEpisodeLike reports whether description generation should
+// require episode-scoped metadata when episode overview support is enabled.
 func descriptionBuilderEpisodeLike(meta api.PreparedMetadata) bool {
 	if meta.SeasonInt > 0 || meta.EpisodeInt > 0 {
 		return true
@@ -2547,12 +2597,13 @@ func (c *Core) FetchDescriptionBuilderGroupPreview(ctx context.Context, req api.
 	if explicitEmpty {
 		return api.DescriptionBuilderGroup{}, nil
 	}
-	if storePreparedCache {
-		c.storeDupeCache(meta.SourcePath, overrideSignature(meta.ExternalIDOverrides, meta.ReleaseNameOverrides, meta.MetadataOverrides, meta.TrackerConfigOverrides, meta.TrackerSiteOverrides, meta.ClientOverrides, meta.TorrentOverrides, meta.ImageHostOverrides, meta.ScreenshotOverrides), meta)
-	}
-	meta, err = c.ensureDescriptionBuilderMetadata(ctx, req, uniquePaths[0], meta)
+	needsDescriptionMetadata := c.services.Metadata != nil && descriptionBuilderNeedsExternalMetadata(c.cfg, meta, resolvedTrackers)
+	meta, err = c.ensureDescriptionBuilderMetadata(ctx, req, uniquePaths[0], meta, resolvedTrackers)
 	if err != nil {
 		return api.DescriptionBuilderGroup{}, err
+	}
+	if storePreparedCache && !needsDescriptionMetadata {
+		c.storeDescriptionBuilderPreparedCache(req, uniquePaths[0], meta)
 	}
 
 	prep, err := c.services.Trackers.BuildPreparation(ctx, meta, resolvedTrackers)
@@ -3415,6 +3466,10 @@ func deepCopyTMDBMetadata(metadata *api.TMDBMetadata) *api.TMDBMetadata {
 	cloned.ProductionCompanies = append([]api.TMDBCompany(nil), metadata.ProductionCompanies...)
 	cloned.ProductionCountries = append([]api.TMDBCountry(nil), metadata.ProductionCountries...)
 	cloned.Networks = append([]api.TMDBNetwork(nil), metadata.Networks...)
+	if metadata.Localized != nil {
+		cloned.Localized = make(map[string]api.TMDBLocalizedData, len(metadata.Localized))
+		maps.Copy(cloned.Localized, metadata.Localized)
+	}
 	return &cloned
 }
 
