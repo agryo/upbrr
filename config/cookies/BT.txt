@@ -1,5 +1,0 @@
-# Netscape HTTP Cookie File
-# http://curl.haxx.se/rfc/cookie_spec.html
-# This is a generated file!  Do not edit.
-
-brasiltracker.org	FALSE	/	TRUE	1811429105	session	Hh%2Be8VZco0T7wO1CTW9zZENnV7Ae%2F1UGhpu4nq3V37Mfsj8nvYGE7tF7f6DHMkgwmDSqxMklvFVOQ9rNp%2FUFAkAZBZ2m7i2K09BVHb0d6HLNhhfw6AOZ8CY%2FmtkuDA9kUmyJpPAdiPA8O9BHBseqEQ%3D%3D

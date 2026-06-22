@@ -41,3 +41,10 @@ gui/frontend/node_modules/.cache/prettier/
 .claude/settings.local.json
 .claude/CLAUDE.local.md
 CLAUDE.local.md
+config/
+config.yaml
+*.sqlite
+web-auth.json
+cookies/
+cache/
+.vscode/

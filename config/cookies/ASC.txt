@@ -1,6 +1,0 @@
-# Netscape HTTP Cookie File
-# http://curl.haxx.se/rfc/cookie_spec.html
-# This is a generated file!  Do not edit.
-
-cliente.amigos-share.club	FALSE	/	FALSE	1814452982	pass	0946db31c1f99fbd04cc76dde8f0c48832966552
-cliente.amigos-share.club	FALSE	/	FALSE	1814452982	uid	3472190
