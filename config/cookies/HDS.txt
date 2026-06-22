@@ -1,0 +1,7 @@
+# Netscape HTTP Cookie File
+# http://curl.haxx.se/rfc/cookie_spec.html
+# This is a generated file!  Do not edit.
+
+hd-space.org	FALSE	/	FALSE	1814453261	uid	247307
+hd-space.org	FALSE	/	FALSE	1814453261	pass	44bea267356fa22303fb147030d485d8
+hd-space.org	FALSE	/	FALSE	0	PHPSESSID	6um64tt4b019f9llt462gj83e4

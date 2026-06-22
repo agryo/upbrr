@@ -1,0 +1,184 @@
+main_settings:
+  update_notification: true
+  verbose_notification: false
+  tmdb_api: "0960cb33037ccca6349b99d7ec602c6d"
+  tracker_pass_checks: 1
+  input_history_limit: 20
+  db_path: ""
+image_hosting:
+  img_host_1: "imgbox"
+  img_host_2: "ptscreens"
+  img_host_3: "passtheimage"
+  img_host_4: "imgbb"
+  img_host_5: "pixhost"
+  img_host_6: "onlyimage"
+  imgbb_api: "ec5b617cc934ad3537590b5b1082b95f"
+  lensdump_api: ""
+  ptscreens_api: "pts_jvK7_744ae7bd2cb44fd7182b0fe4eeddb061ab77450a275a4fee7a0f8050cc23a6fc129ffbe1469b2ad9dc8b533dd4c3904b1abc5a7a6357c458076830df5646668e"
+  onlyimage_api: "chv_nFsS_56213e0bf9b569639f413bbd330eba5877a2ded5d43af27175585ad27b963b622ebd56af0770f29f0ab4431c36b98f6ffbf20361eb13aec0f6e8a558f319a5d4"
+  dalexni_api: ""
+  passtheima_ge_api: "chv_ajX_91e805eb4717eea527419d14c4d2892777f052e13612df35f4ca427203061aa9_76d2fdb45646bf4342d454e726333aed8730480c2791b22d47d66309d60445d2"
+  zipline_url: ""
+  zipline_api_key: ""
+  seedpool_cdn_api: ""
+  sharex_url: ""
+  sharex_api_key: ""
+  utppm_api: ""
+  lostimg_enabled: false
+  lostimg_api: ""
+metadata:
+  btn_api: ""
+  skip_auto_torrent: false
+  skip_tracker_filename_lookup: false
+  use_largest_playlist: false
+  keep_images: true
+  only_id: false
+  user_overrides: false
+  ping_unit3d: false
+  get_bluray_info: false
+  bluray_score: 94.5
+  bluray_single_score: 89.5
+  check_predb: false
+screenshot_handling:
+  screens: 4
+  min_successful_image_uploads: 3
+  cutoff_screens: 4
+  frame_overlay: false
+  overlay_text_size: 18
+  process_limit: 4
+  max_concurrent_uploads: 6
+  ffmpeg_limit: false
+  tone_map: true
+  use_libplacebo: true
+  ffmpeg_compression: 6
+  algorithm: "mobius"
+  desat: 10.0
+description_settings:
+  add_logo: false
+  logo_size: 300
+  logo_language: "pt-BR"
+  thumbnail_size: 350
+  screens_per_row: ""
+  episode_overview: false
+  tonemapped_header: "[center][code] Screenshots have been tonemapped for reference [/code][/center]"
+  multiScreens: 2
+  pack_thumb_size: 300
+  charLimit: 14000
+  fileLimit: 2
+  processLimit: 10
+  custom_description_header: ""
+  screenshot_header: ""
+  disc_menu_header: ""
+  custom_signature: ""
+  add_bluray_link: false
+  use_bluray_images: false
+  bluray_image_size: 250
+client_setup:
+  default_torrent_client: "qbittorrent"
+  injecting_client_list: []
+  searching_client_list: []
+arr_integration:
+  use_sonarr: false
+  sonarr_url: "http://localhost:8989"
+  sonarr_api_key: ""
+  sonarr_url_1: "http://my-second-instance:8989"
+  sonarr_api_key_1: ""
+  sonarr_url_2: ""
+  sonarr_api_key_2: ""
+  sonarr_url_3: ""
+  sonarr_api_key_3: ""
+  use_radarr: false
+  radarr_url: "http://localhost:7878"
+  radarr_api_key: ""
+  radarr_url_1: "http://my-second-instance:7878"
+  radarr_api_key_1: ""
+  radarr_url_2: ""
+  radarr_api_key_2: ""
+  radarr_url_3: ""
+  radarr_api_key_3: ""
+  emby_dir: ""
+  emby_tv_dir: ""
+torrent_creation:
+  mkbrr_threads: 0
+  prefer_max_16_torrent: false
+  rehash_cooldown: 0
+post_upload:
+  inject_delay: 0
+  show_upload_duration: true
+  print_tracker_messages: false
+  print_tracker_links: true
+  max_concurrent_tracker_uploads: 4
+  search_requests: false
+  cross_seeding: true
+  cross_seed_check_everything: false
+logging:
+  level: "info"
+  file_enabled: false
+  max_total_size_mb: 20
+  max_files: 3
+trackers:
+  default_trackers:
+    - "ASC"
+    - "BT"
+  preferred_tracker: ""
+  ASC:
+    link_dir_name: ""
+    uploader_status: true
+    custom_layout: "490"
+    url: "https://amigos-share.club"
+    announce_url: "https://amigos-share.club/announce.php?passkey=78e822accc731b617146cfe0943132f2"
+  BJS:
+    link_dir_name: ""
+    url: "https://bj-share.info"
+    announce_url: "https://tracker.bj-share.info:2053/<PASSKEY>/announce"
+    anon: true
+    show_group_if_anon: true
+  BT:
+    link_dir_name: ""
+    url: "https://brasiltracker.org"
+    announce_url: "https://t.brasiltracker.org/34f04baf7c8f4dd64c376494459fd92a/announce"
+    anon: true
+  CBR:
+    link_dir_name: ""
+    api_key: "J3fayl1yo4ngLWsCspFtrpdBd52Mev49TRxfGtiKakHewAWT25rKkVrGZDx8qa9I9kJoElfYDWksMFecEJOwUg1X3Ujt6cg7Ar3n"
+    url: "https://capybarabr.com"
+    anon: true
+    modq: false
+    tag_for_custom_release: ""
+  DC:
+    link_dir_name: ""
+    api_key: "ba6308ecf1fc06683d079fe455415e27455dac3c"
+    url: "https://digitalcore.club"
+    anon: true
+    use_metadata_name: false
+  HDS:
+    link_dir_name: ""
+    url: "https://hd-space.org"
+    announce_url: "http://hd-space.pw/announce.php?pid=13a4821e36a737aea78369fbc3ec4c5e"
+    anon: true
+    full_mediainfo: false
+  MANUAL:
+    filebrowser: ""
+torrent_clients:
+  qbittorrent:
+    torrent_client: "qbit"
+    qui_proxy_url: ""
+    qbit_url: "http://127.0.0.1"
+    qbit_port: 8080
+    qbit_user: "admin"
+    qbit_pass: "13596898"
+    use_tracker_as_tag: false
+    qbit_tag: ""
+    qbit_cat: ""
+    linking: ""
+    allow_fallback: true
+    linked_folder:
+      - ""
+    local_path:
+      - ""
+    remote_path:
+      - ""
+    verify_webui_certificate: false
+  watch:
+    torrent_client: "watch"
+    watch_folder: "D:/DriveKey/Upbrr/watch"
