@@ -30,6 +30,7 @@ import { useScreenshots } from "./hooks/useScreenshots";
 import { useUploadImages } from "./hooks/useUploadImages";
 import { useTrackerIcons } from "./hooks/useTrackerIcons";
 import { cn } from "./utils/cn";
+import { useTranslation } from "./i18n";
 import type {
   ConfigMap,
   ApplicationInfo,
@@ -645,6 +646,7 @@ const emptyWebAuthStatus: WebAuthStatus = {
 };
 
 export default function App() {
+  const { t, ready } = useTranslation();
   const browserMode = isBrowserMode();
   const browserNativeBrowseAvailable = useSyncExternalStore(
     subscribeBrowserNativeBrowseAvailability,
@@ -932,6 +934,18 @@ export default function App() {
     applyTheme(nextTheme);
   };
 
+  const getThemeIcon = () => {
+    if (theme === "auto") return "🔄";
+    if (theme === "light") return "☀️";
+    return "🌙";
+  };
+
+  const getThemeLabel = () => {
+    if (theme === "auto") return t("theme.auto");
+    if (theme === "light") return t("theme.light");
+    return t("theme.dark");
+  };
+
   useEffect(() => {
     let cancelled = false;
     const getter = (globalThis.go?.guiapp?.App as AppBridgeWithApplicationInfo | undefined)
@@ -1027,18 +1041,6 @@ export default function App() {
       }
     };
   }, []);
-
-  const getThemeIcon = () => {
-    if (theme === "auto") return "🔄";
-    if (theme === "light") return "☀️";
-    return "🌙";
-  };
-
-  const getThemeLabel = () => {
-    if (theme === "auto") return "Auto";
-    if (theme === "light") return "Light";
-    return "Dark";
-  };
 
   const skipAutoTorrentEnabled = isSkipAutoTorrentEnabled(configData);
   const hasTrackerData =
@@ -1485,7 +1487,7 @@ export default function App() {
     if (trackerImageURLs.length === 0) {
       return;
     }
-    if (!globalThis.confirm("Remove all tracker images from the list?")) {
+    if (!globalThis.confirm(t("screenshots.confirmRemoveAllTrackers"))) {
       return;
     }
     for (const url of trackerImageURLs) {
@@ -1901,7 +1903,7 @@ export default function App() {
   const openHostBrowser = async (mode: "file" | "folder", startPath = "") => {
     const browser = globalThis.go?.guiapp?.App?.BrowseDirectory;
     if (!browser) {
-      setError("Browse is unavailable in this build.");
+      setError(t("common.browseUnavailable"));
       return;
     }
     setHostBrowserMode(mode);
@@ -1929,7 +1931,7 @@ export default function App() {
     const browse =
       mode === "file" ? app?.BrowseFile || app?.BrowsePath : app?.BrowseFolder || app?.BrowsePath;
     if (!browse) {
-      setError("Browse is unavailable in this build.");
+      setError(t("common.browseUnavailable"));
       return;
     }
     try {
@@ -2133,11 +2135,11 @@ export default function App() {
     setPlaylistPreparationError("");
     const fetcher = globalThis.go?.guiapp?.App?.FetchPreparation;
     if (!fetcher) {
-      setPlaylistPreparationError("Preparation preview is unavailable in this build.");
+      setPlaylistPreparationError(t("playlist.preparationUnavailable"));
       return false;
     }
     if (!path.trim()) {
-      setPlaylistPreparationError("Please select a file or folder.");
+      setPlaylistPreparationError(t("common.selectPath"));
       return false;
     }
     const selectedTrackers =
@@ -2147,7 +2149,7 @@ export default function App() {
       playlistPreparationTrackerSnapshot?.emptySelection ??
       selectedUploadTrackerEligibility.emptySelection;
     if (selectedTrackers.length === 0 && emptySelection) {
-      setPlaylistPreparationError("Select at least one tracker before preparing playlists.");
+      setPlaylistPreparationError(t("playlist.selectAtLeastOneTracker"));
       return false;
     }
     try {
@@ -2192,18 +2194,18 @@ export default function App() {
     setBluraySelectionError("");
     const fetcher = globalThis.go?.guiapp?.App?.FetchMetadata;
     if (!fetcher) {
-      setError("Fetch metadata is unavailable in this build.");
+      setError(t("input.fetchUnavailable"));
       return;
     }
     const targetPath = (options.targetPath ?? path).trim();
     if (!targetPath) {
-      setError("Please select a file or folder.");
+      setError(t("common.selectPath"));
       return;
     }
     const trackerEligibility = resolveUploadTrackerEligibilityForPath(targetPath);
     const selectedTrackers = trackerEligibility.selectedTrackers;
     if (selectedTrackers.length === 0 && trackerEligibility.emptySelection) {
-      setError("Select at least one tracker before fetching metadata.");
+      setError(t("input.selectTrackersForFetch"));
       return;
     }
     metadataProgressTargetRef.current = targetPath;
@@ -2240,12 +2242,12 @@ export default function App() {
 
   const handleSourcePathDrop = async (paths: string[]) => {
     if (loading) {
-      setError("Metadata fetch is already running.");
+      setError(t("common.fetchAlreadyRunning"));
       return;
     }
     const droppedPath = paths.find((candidate) => candidate.trim())?.trim() || "";
     if (!droppedPath) {
-      setError("Dropped file path was empty.");
+      setError(t("common.emptyDroppedPath"));
       return;
     }
     setError("");
@@ -2262,6 +2264,10 @@ export default function App() {
   sourcePathDropHandlerRef.current = (paths: string[]) => {
     void handleSourcePathDrop(paths);
   };
+
+  if (!ready) {
+    return <div className="loading-screen">Loading...</div>;
+  }
 
   useEffect(() => {
     const runtime = (
@@ -2303,23 +2309,19 @@ export default function App() {
     setError("");
     const resetter = globalThis.go?.guiapp?.App?.ResetMetadata;
     if (!resetter) {
-      setError("Metadata reset is unavailable in this build.");
+      setError(t("input.resetUnavailable"));
       return;
     }
     if (!path.trim()) {
-      setError("Please select a file or folder.");
+      setError(t("common.selectPath"));
       return;
     }
     const selectedTrackers = selectedUploadImageTrackers;
     if (selectedTrackers.length === 0 && selectedUploadTrackerEligibility.emptySelection) {
-      setError("Select at least one tracker before resetting metadata.");
+      setError(t("input.selectTrackersForReset"));
       return;
     }
-    if (
-      !globalThis.confirm(
-        "Remove cached metadata and temporary files for this content, then refetch metadata?",
-      )
-    ) {
+    if (!globalThis.confirm(t("app.confirmResetMetadata"))) {
       return;
     }
     const targetPath = path.trim();
@@ -2348,12 +2350,12 @@ export default function App() {
     setBluraySelectionError("");
     const selector = globalThis.go?.guiapp?.App?.SelectBlurayCandidate;
     if (!selector) {
-      setBluraySelectionError("Blu-ray candidate selection is unavailable in this build.");
+      setBluraySelectionError(t("bluray.selectionUnavailable"));
       return;
     }
     const targetPath = (preview.SourcePath || path).trim();
     if (!targetPath || !releaseID.trim()) {
-      setBluraySelectionError("Path and release candidate are required.");
+      setBluraySelectionError(t("bluray.requiredPathAndRelease"));
       return;
     }
     setBluraySelecting(true);
@@ -2379,11 +2381,11 @@ export default function App() {
       setBuilderProgressMessage("");
       const fetcher = globalThis.go?.guiapp?.App?.FetchDescriptionBuilder;
       if (!fetcher) {
-        setBuilderError("Description builder is unavailable in this build.");
+        setBuilderError(t("descriptionBuilder.unavailable"));
         return;
       }
       if (!path.trim()) {
-        setBuilderError("Please select a file or folder.");
+        setBuilderError(t("common.selectPath"));
         return;
       }
       const selectedTrackers = selectedUploadImageTrackers;
@@ -2391,35 +2393,34 @@ export default function App() {
         selectedTrackers.length === 0 &&
         hasExplicitEmptyReleaseTrackerSelection(trackerUploadItems, releasePageTrackerSelection)
       ) {
-        setBuilderError("Select at least one tracker before building descriptions.");
+        setBuilderError(t("descriptionBuilder.selectTrackers"));
         return;
       }
       if (selectedTrackers.length === 0) {
-        setBuilderError("Enable at least one tracker in Upload Targets.");
+        setBuilderError(t("trackerUpload.selectTrackers"));
         return;
       }
       setBuilderLoading(true);
-      setBuilderProgressMessage("Preparing metadata and tracker selection...");
+      setBuilderProgressMessage(t("descriptionBuilder.progressPreparing"));
       builderProgressTimers.current = [
         window.setTimeout(
-          () => setBuilderProgressMessage("Checking image-host requirements..."),
+          () => setBuilderProgressMessage(t("descriptionBuilder.progressCheckingImageHost")),
           900,
         ),
         window.setTimeout(
-          () =>
-            setBuilderProgressMessage("Rehosting required comparison and description images..."),
+          () => setBuilderProgressMessage(t("descriptionBuilder.progressRehosting")),
           2500,
         ),
         window.setTimeout(
-          () => setBuilderProgressMessage("Still rehosting images and building descriptions..."),
+          () => setBuilderProgressMessage(t("descriptionBuilder.progressStillRehosting")),
           5000,
         ),
         window.setTimeout(
-          () => setBuilderProgressMessage("Large image upload still running..."),
+          () => setBuilderProgressMessage(t("descriptionBuilder.progressLargeUpload")),
           15000,
         ),
         window.setTimeout(
-          () => setBuilderProgressMessage("Waiting for image hosts to finish..."),
+          () => setBuilderProgressMessage(t("descriptionBuilder.progressWaitingHosts")),
           30000,
         ),
       ];
@@ -2451,7 +2452,7 @@ export default function App() {
         });
         setBuilderDirtyByGroup({});
         clearBuilderProgressTimers();
-        setBuilderProgressMessage("Refreshing uploaded image records...");
+        setBuilderProgressMessage(t("descriptionBuilder.progressRefreshing"));
         await refreshUploadedImages();
       } catch (err) {
         setBuilderError(String(err));
@@ -2468,14 +2469,13 @@ export default function App() {
       selectedUploadImageTrackers,
       ignoredDupeTrackers,
       refreshUploadedImages,
+      t,
     ],
   );
 
   const refreshDescriptionBuilder = useCallback(async () => {
     if (builderDirty) {
-      const shouldRefresh = window.confirm(
-        "Refreshing descriptions will discard unsaved description edits. Continue?",
-      );
+      const shouldRefresh = window.confirm(t("app.confirmRefreshDescriptions"));
       if (!shouldRefresh) {
         return;
       }
@@ -2490,7 +2490,7 @@ export default function App() {
     } finally {
       setBuilderRefreshing(false);
     }
-  }, [builderDirty, idOverrideState, releaseOverrideState, runDescriptionBuilder]);
+  }, [builderDirty, idOverrideState, releaseOverrideState, runDescriptionBuilder, t]);
 
   useEffect(() => {
     return () => {
@@ -2508,16 +2508,16 @@ export default function App() {
     setBuilderSaved("");
     const saver = globalThis.go?.guiapp?.App?.SaveDescriptionOverride;
     if (!saver) {
-      setBuilderError("Description saving is unavailable in this build.");
+      setBuilderError(t("descriptionBuilder.saveUnavailable"));
       return;
     }
     if (!path.trim()) {
-      setBuilderError("Please select a file or folder.");
+      setBuilderError(t("common.selectPath"));
       return;
     }
     const currentGroup = (builderPreview.Groups || []).find((group) => group.GroupKey === groupKey);
     if (!currentGroup) {
-      setBuilderError("Description group not found.");
+      setBuilderError(t("descriptionBuilder.groupNotFound"));
       return;
     }
     setBuilderLoading(true);
@@ -2537,7 +2537,7 @@ export default function App() {
         [groupKey]: updatedGroup.RawDescriptionHTML || "",
       }));
       setBuilderDirtyByGroup((prev) => ({ ...prev, [groupKey]: false }));
-      setBuilderSaved("Description reset.");
+      setBuilderSaved(t("descriptionBuilder.resetSuccess"));
     } catch (err) {
       setBuilderError(String(err));
     } finally {
@@ -2549,7 +2549,7 @@ export default function App() {
     setBuilderError("");
     const renderer = globalThis.go?.guiapp?.App?.RenderDescription;
     if (!renderer) {
-      setBuilderError("Description rendering is unavailable in this build.");
+      setBuilderError(t("descriptionBuilder.renderUnavailable"));
       return;
     }
     const raw = builderRawByGroup[groupKey] || "";
@@ -2573,16 +2573,16 @@ export default function App() {
     setBuilderSaved("");
     const saver = globalThis.go?.guiapp?.App?.SaveDescriptionOverride;
     if (!saver) {
-      setBuilderError("Description saving is unavailable in this build.");
+      setBuilderError(t("descriptionBuilder.saveUnavailable"));
       return;
     }
     if (!path.trim()) {
-      setBuilderError("Please select a file or folder.");
+      setBuilderError(t("common.selectPath"));
       return;
     }
     const currentGroup = (builderPreview.Groups || []).find((group) => group.GroupKey === groupKey);
     if (!currentGroup) {
-      setBuilderError("Description group not found.");
+      setBuilderError(t("descriptionBuilder.groupNotFound"));
       return;
     }
     setBuilderSaving(true);
@@ -2606,15 +2606,15 @@ export default function App() {
         ...prev,
         [groupKey]: updatedGroup.RawDescriptionHTML || "",
       }));
-      setBuilderSaved("Description saved.");
+      setBuilderSaved(t("descriptionBuilder.saveSuccess"));
       setBuilderDirtyByGroup((prev) => ({ ...prev, [groupKey]: false }));
 
       if (shouldRefreshDryRun) {
         try {
           await runTrackerDryRun(nextPreview.Groups || [], false);
-          setBuilderSaved("Description saved. Dry run refreshed.");
+          setBuilderSaved(t("descriptionBuilder.saveDryRunRefreshed"));
         } catch (err) {
-          setTrackerDryRunError(`Description saved, but dry run refresh failed: ${String(err)}`);
+          setTrackerDryRunError(t("descriptionBuilder.saveDryRunFailed", { error: String(err) }));
         }
       }
     } catch (err) {
@@ -2630,7 +2630,7 @@ export default function App() {
   ) => {
     const runner = globalThis.go?.guiapp?.App?.GenerateScreenshots;
     if (!runner) {
-      throw new Error("Screenshot capture is unavailable in this build.");
+      throw new Error(t("screenshots.captureUnavailable"));
     }
     return runner(
       path.trim(),
@@ -2693,17 +2693,17 @@ export default function App() {
   const runLivePreviewAt = async (timestampSeconds: number) => {
     setLivePreviewError("");
     if (!path.trim()) {
-      setLivePreviewError("Please select a file or folder.");
+      setLivePreviewError(t("common.selectPath"));
       return;
     }
     if (!screenshots.screenshotPlan) {
-      setLivePreviewError("Load suggestions to enable live preview.");
+      setLivePreviewError(t("screenshots.loadSuggestionsForPreview"));
       return;
     }
 
     const previewer = globalThis.go?.guiapp?.App?.PreviewScreenshotFrame;
     if (!previewer) {
-      setLivePreviewError("Live preview is unavailable in this build.");
+      setLivePreviewError(t("screenshots.previewUnavailable"));
       return;
     }
 
@@ -2748,7 +2748,7 @@ export default function App() {
   const handlePreviewSelection = async (selection: ScreenshotSelection) => {
     screenshots.setScreenshotsError("");
     if (!path.trim()) {
-      screenshots.setScreenshotsError("Please select a file or folder.");
+      screenshots.setScreenshotsError(t("common.selectPath"));
       return;
     }
     screenshots.setPreviewLoadingIndex(selection.Index);
@@ -2780,7 +2780,7 @@ export default function App() {
   const handleCapturePreviewFrame = async () => {
     screenshots.setScreenshotsError("");
     if (!path.trim()) {
-      screenshots.setScreenshotsError("Please select a file or folder.");
+      screenshots.setScreenshotsError(t("common.selectPath"));
       return;
     }
 
@@ -2790,7 +2790,7 @@ export default function App() {
         ? screenshots.screenshotSelections
         : screenshots.screenshotPlan?.SuggestedSelections || [];
     if (baseSelections.length === 0) {
-      screenshots.setScreenshotsError("No screenshot selections available.");
+      screenshots.setScreenshotsError(t("screenshots.noSelections"));
       return;
     }
 
@@ -2822,7 +2822,7 @@ export default function App() {
     );
 
     if (!closest) {
-      screenshots.setScreenshotsError("No screenshot selections available.");
+      screenshots.setScreenshotsError(t("screenshots.noSelections"));
       return;
     }
 
@@ -2851,7 +2851,7 @@ export default function App() {
       manualSelection ||
       (reindexed.targetIndex >= 0 ? reindexed.selections[reindexed.targetIndex] : undefined);
     if (!resolvedSelection) {
-      screenshots.setScreenshotsError("Failed to resolve capture index.");
+      screenshots.setScreenshotsError(t("screenshots.failedResolveIndex"));
       return;
     }
     screenshots.setScreenshotSelections(reindexed.selections);
@@ -2910,7 +2910,7 @@ export default function App() {
   const handleGenerateScreenshots = async () => {
     screenshots.setScreenshotsError("");
     if (!path.trim()) {
-      screenshots.setScreenshotsError("Please select a file or folder.");
+      screenshots.setScreenshotsError(t("common.selectPath"));
       return;
     }
     let selections = screenshots.screenshotSelections;
@@ -2919,13 +2919,13 @@ export default function App() {
       selections = plan?.SuggestedSelections || [];
     }
     if (selections.length === 0) {
-      screenshots.setScreenshotsError("No screenshot selections available.");
+      screenshots.setScreenshotsError(t("screenshots.noSelections"));
       return;
     }
     const existingIndices = buildExistingSelectionIndexSet();
     const filteredSelections = selections.filter((entry) => !existingIndices.has(entry.Index));
     if (filteredSelections.length === 0) {
-      screenshots.setScreenshotsError("All requested screenshots already exist.");
+      screenshots.setScreenshotsError(t("screenshots.alreadyExist"));
       return;
     }
     screenshots.setScreenshotsLoading(true);
@@ -2943,45 +2943,48 @@ export default function App() {
     }
   };
 
-  const applyDupeCheckSnapshot = useCallback((snapshot: DupeCheckSnapshot) => {
-    setDupeCheckSnapshot(snapshot);
-    setDupeSummary(snapshot.summary || emptyDupeSummary);
+  const applyDupeCheckSnapshot = useCallback(
+    (snapshot: DupeCheckSnapshot) => {
+      setDupeCheckSnapshot(snapshot);
+      setDupeSummary(snapshot.summary || emptyDupeSummary);
 
-    const normalized = normalizeJobStatus(snapshot.status);
-    const running = isRunningJobStatus(normalized);
-    setDupeLoading(running);
+      const normalized = normalizeJobStatus(snapshot.status);
+      const running = isRunningJobStatus(normalized);
+      setDupeLoading(running);
 
-    if (normalized === "completed") {
-      setDupeChecked(true);
-      setDupeError("");
-    } else if (normalized === "completed_with_errors") {
-      setDupeChecked(true);
-      setDupeError(snapshot.error || "One or more tracker dupe checks failed.");
-    } else if (normalized === "failed" || normalized === "canceled") {
-      setDupeChecked(false);
-      setDupeError(snapshot.error || "Dupe check failed.");
-    }
-  }, []);
+      if (normalized === "completed") {
+        setDupeChecked(true);
+        setDupeError("");
+      } else if (normalized === "completed_with_errors") {
+        setDupeChecked(true);
+        setDupeError(snapshot.error || t("dupeCheck.oneOrMoreFailed"));
+      } else if (normalized === "failed" || normalized === "canceled") {
+        setDupeChecked(false);
+        setDupeError(snapshot.error || t("dupeCheck.failed"));
+      }
+    },
+    [t],
+  );
 
   const handleDupeCheck = async () => {
     setDupeError("");
     const starter = globalThis.go?.guiapp?.App?.StartDupeCheck;
     const snapshotLoader = globalThis.go?.guiapp?.App?.GetDupeCheckSnapshot;
     if (!starter) {
-      setDupeError("Dupe checking is unavailable in this build.");
+      setDupeError(t("dupeCheck.unavailable"));
       return;
     }
     if (!path.trim()) {
-      setDupeError("Please select a file or folder.");
+      setDupeError(t("common.selectPath"));
       return;
     }
     if (idOverrideState?.invalid || releaseOverrideState?.invalid) {
-      setDupeError("Fix invalid overrides before checking dupes.");
+      setDupeError(t("dupeCheck.fixInvalidOverrides"));
       return;
     }
     const selectedTrackers = getSelectedTrackers();
     if (selectedTrackers.length === 0) {
-      setDupeError("Select at least one tracker before checking dupes.");
+      setDupeError(t("dupeCheck.selectTrackers"));
       return;
     }
     setDupeChecked(false);
@@ -3003,7 +3006,7 @@ export default function App() {
       setDupeCheckSnapshot(null);
       setDupeChecked(false);
       if (message.includes("dupe check requires metadata preview")) {
-        setDupeError("Fetch metadata first to cache a preview before checking dupes.");
+        setDupeError(t("dupeCheck.fetchMetadataFirst"));
       } else {
         setDupeError(message);
       }
@@ -3364,41 +3367,44 @@ export default function App() {
   );
 
   /** Applies an upload job snapshot from either live events or polling fallback. */
-  const applyTrackerUploadSnapshot = useCallback((snapshot: TrackerUploadSnapshot) => {
-    setTrackerUploadSnapshot(snapshot);
-    const normalized = normalizeJobStatus(snapshot.status);
-    const running = isRunningJobStatus(normalized);
-    setTrackerUploadRunning(running);
-    if (normalized === "completed") {
-      setTrackerUploadError("");
-    } else if (
-      normalized === "completed_with_errors" ||
-      normalized === "failed" ||
-      normalized === "canceled"
-    ) {
-      setTrackerUploadError(snapshot.error || "Upload finished with errors.");
-    }
-  }, []);
+  const applyTrackerUploadSnapshot = useCallback(
+    (snapshot: TrackerUploadSnapshot) => {
+      setTrackerUploadSnapshot(snapshot);
+      const normalized = normalizeJobStatus(snapshot.status);
+      const running = isRunningJobStatus(normalized);
+      setTrackerUploadRunning(running);
+      if (normalized === "completed") {
+        setTrackerUploadError("");
+      } else if (
+        normalized === "completed_with_errors" ||
+        normalized === "failed" ||
+        normalized === "canceled"
+      ) {
+        setTrackerUploadError(snapshot.error || t("trackerUpload.uploadFinishedWithErrors"));
+      }
+    },
+    [t],
+  );
 
   const handleStartTrackerUpload = useCallback(async () => {
     setTrackerUploadError("");
     const starter = globalThis.go?.guiapp?.App?.StartTrackerUpload;
     const snapshotLoader = globalThis.go?.guiapp?.App?.GetTrackerUploadSnapshot;
     if (!starter) {
-      setTrackerUploadError("Tracker upload is unavailable in this build.");
+      setTrackerUploadError(t("trackerUpload.uploadUnavailable"));
       return;
     }
     if (!path.trim()) {
-      setTrackerUploadError("Please select a file or folder.");
+      setTrackerUploadError(t("common.selectPath"));
       return;
     }
     if (idOverrideState?.invalid || releaseOverrideState?.invalid) {
-      setTrackerUploadError("Fix invalid overrides before uploading.");
+      setTrackerUploadError(t("trackerUpload.fixInvalidOverrides"));
       return;
     }
     const selectedTrackers = getSelectedUploadTrackers();
     if (selectedTrackers.length === 0) {
-      setTrackerUploadError("Enable at least one tracker in Upload Targets.");
+      setTrackerUploadError(t("trackerUpload.selectTrackers"));
       return;
     }
     const missingRequiredFields: string[] = [];
@@ -3425,7 +3431,7 @@ export default function App() {
     });
     if (missingRequiredFields.length > 0) {
       setTrackerUploadError(
-        `Complete required questionnaire fields before uploading: ${missingRequiredFields.join(", ")}`,
+        t("trackerUpload.completeRequiredFields", { fields: missingRequiredFields.join(", ") }),
       );
       return;
     }
@@ -3472,6 +3478,7 @@ export default function App() {
     uploadSkipClientInjection,
     runLogLevel,
     applyTrackerUploadSnapshot,
+    t,
   ]);
 
   const runTrackerDryRun = useCallback(
@@ -3481,7 +3488,7 @@ export default function App() {
       }
       const fetcher = globalThis.go?.guiapp?.App?.FetchTrackerDryRun;
       if (!fetcher) {
-        const message = "Tracker dry run is unavailable in this build.";
+        const message = t("trackerUpload.dryRunUnavailable");
         if (surfaceError) {
           setTrackerDryRunError(message);
           return null;
@@ -3489,7 +3496,7 @@ export default function App() {
         throw new Error(message);
       }
       if (!path.trim()) {
-        const message = "Please select a file or folder.";
+        const message = t("common.selectPath");
         if (surfaceError) {
           setTrackerDryRunError(message);
           return null;
@@ -3497,7 +3504,7 @@ export default function App() {
         throw new Error(message);
       }
       if (idOverrideState?.invalid || releaseOverrideState?.invalid) {
-        const message = "Fix invalid overrides before running dry run.";
+        const message = t("trackerUpload.fixInvalidOverrides");
         if (surfaceError) {
           setTrackerDryRunError(message);
           return null;
@@ -3506,7 +3513,7 @@ export default function App() {
       }
       const selectedTrackers = getSelectedUploadTrackers();
       if (selectedTrackers.length === 0) {
-        const message = "Enable at least one tracker in Upload Targets.";
+        const message = t("trackerUpload.selectTrackers");
         if (surfaceError) {
           setTrackerDryRunError(message);
           return null;
@@ -3520,7 +3527,7 @@ export default function App() {
         tracker: "",
         task: "dry_run",
         status: "running",
-        message: "Starting dry run",
+        message: t("trackerUpload.startingDryRun"),
         completedPieces: 0,
         totalPieces: 0,
         percent: 0,
@@ -3578,6 +3585,7 @@ export default function App() {
       runDebug,
       uploadSkipClientInjection,
       runLogLevel,
+      t,
     ],
   );
 
@@ -3609,7 +3617,7 @@ export default function App() {
     }
     const cancel = globalThis.go?.guiapp?.App?.CancelTrackerUpload;
     if (!cancel) {
-      setTrackerUploadError("Tracker upload cancel is unavailable in this build.");
+      setTrackerUploadError(t("trackerUpload.cancelUnavailable"));
       return;
     }
     try {
@@ -3627,7 +3635,7 @@ export default function App() {
     const retry = globalThis.go?.guiapp?.App?.RetryFailedTrackerUpload;
     const snapshotLoader = globalThis.go?.guiapp?.App?.GetTrackerUploadSnapshot;
     if (!retry) {
-      setTrackerUploadError("Tracker retry is unavailable in this build.");
+      setTrackerUploadError(t("trackerUpload.retryUnavailable"));
       return;
     }
     setTrackerUploadRunning(true);
@@ -3721,12 +3729,12 @@ export default function App() {
     clearSettingsStatus();
     const saveConfig = globalThis.go?.guiapp?.App?.SaveConfig;
     if (!saveConfig) {
-      screenshots.setScreenshotsError("Settings are unavailable in this build.");
+      screenshots.setScreenshotsError(t("settings.unavailableInBuild"));
       return;
     }
     const payload = buildSavePayload();
     if (!payload) {
-      screenshots.setScreenshotsError("Settings are not loaded.");
+      screenshots.setScreenshotsError(t("settings.notLoaded"));
       return;
     }
     setScreenshotsSettingsSaving(true);
@@ -3768,8 +3776,8 @@ export default function App() {
     if (!exportConfig) {
       showConfigOpStatus({
         type: "error",
-        title: "Export Failed",
-        message: "Settings export is unavailable in this build.",
+        title: t("settings.exportFailedTitle"),
+        message: t("settings.exportUnavailable"),
       });
       return;
     }
@@ -3780,12 +3788,16 @@ export default function App() {
       if (exportedPath?.trim()) {
         showConfigOpStatus({
           type: "success",
-          title: "Configuration Exported",
-          message: `Saved to ${exportedPath}`,
+          title: t("settings.exportSuccessTitle"),
+          message: t("settings.exportSuccessMessage", { path: exportedPath }),
         });
       }
     } catch (err) {
-      showConfigOpStatus({ type: "error", title: "Export Failed", message: String(err) });
+      showConfigOpStatus({
+        type: "error",
+        title: t("settings.exportFailedTitle"),
+        message: String(err),
+      });
     } finally {
       setSettingsExporting(false);
     }
@@ -3808,8 +3820,8 @@ export default function App() {
       setImportConfirmOpen(false);
       showConfigOpStatus({
         type: "error",
-        title: "Import Failed",
-        message: "Config import is unavailable in this build.",
+        title: t("settings.importFailedTitle"),
+        message: t("settings.importUnavailable"),
       });
       return;
     }
@@ -3823,13 +3835,26 @@ export default function App() {
       }
       const warnings = result?.warnings ?? [];
       if (warnings.length > 0) {
-        showConfigOpStatus({ type: "warning", title: "Imported with Warnings", message, warnings });
+        showConfigOpStatus({
+          type: "warning",
+          title: t("settings.importWarningTitle"),
+          message,
+          warnings,
+        });
       } else {
-        showConfigOpStatus({ type: "success", title: "Configuration Imported", message });
+        showConfigOpStatus({
+          type: "success",
+          title: t("settings.importSuccessTitle"),
+          message,
+        });
       }
       loadSettings();
     } catch (err) {
-      showConfigOpStatus({ type: "error", title: "Import Failed", message: String(err) });
+      showConfigOpStatus({
+        type: "error",
+        title: t("settings.importFailedTitle"),
+        message: String(err),
+      });
     } finally {
       setSettingsImporting(false);
       setImportConfirmOpen(false);
@@ -3850,7 +3875,7 @@ export default function App() {
       const status = await getWebAuthStatus();
       setWebAuthStatus(status);
     } catch (err) {
-      setWebAuthStatus({ ...emptyWebAuthStatus, message: "Unable to load web auth status." });
+      setWebAuthStatus({ ...emptyWebAuthStatus, message: t("settings.authStatusUnavailable") });
       setWebAuthError(String(err));
     } finally {
       setWebAuthLoading(false);
@@ -3863,13 +3888,13 @@ export default function App() {
     setWebAuthError("");
 
     if (webAuthPassword !== webAuthConfirm) {
-      setWebAuthError("Passwords do not match.");
+      setWebAuthError(t("settings.passwordsMismatch"));
       return;
     }
 
     const createWebAuth = globalThis.go?.guiapp?.App?.CreateWebAuth;
     if (!createWebAuth) {
-      setWebAuthError("Web auth bootstrap is unavailable in this build.");
+      setWebAuthError(t("settings.webAuthUnavailable"));
       return;
     }
 
@@ -3879,7 +3904,7 @@ export default function App() {
       setWebAuthStatus(status);
       setWebAuthPassword("");
       setWebAuthConfirm("");
-      markSettingsSaved("Web auth created. Future secret saves and exports can use encryption.");
+      markSettingsSaved(t("settings.webAuthCreated"));
     } catch (err) {
       setWebAuthError(String(err));
     } finally {
@@ -3917,7 +3942,7 @@ export default function App() {
               type="button"
               onClick={() => setActiveTab("input")}
             >
-              Input
+              {t("navigation.inputMetadata")}
             </button>
             {hasTrackerData ? (
               <button
@@ -3925,7 +3950,7 @@ export default function App() {
                 type="button"
                 onClick={() => setActiveTab("tracker")}
               >
-                Tracker Data
+                {t("navigation.trackerData")}
               </button>
             ) : null}
             {hasBlurayData ? (
@@ -3934,7 +3959,7 @@ export default function App() {
                 type="button"
                 onClick={() => setActiveTab("bluray")}
               >
-                Blu-ray.com
+                {t("app.bluray")}
               </button>
             ) : null}
             {hasPreview ? (
@@ -3943,7 +3968,7 @@ export default function App() {
                 type="button"
                 onClick={() => setActiveTab("dupes")}
               >
-                Dupe Checking
+                {t("navigation.dupeCheck")}
               </button>
             ) : null}
             {dupeChecked ? (
@@ -3952,7 +3977,7 @@ export default function App() {
                 type="button"
                 onClick={() => setActiveTab("screenshots")}
               >
-                Screenshots
+                {t("navigation.screenshots")}
               </button>
             ) : null}
             {dupeChecked && ["BDMV", "DVD", "HDDVD"].includes(currentDiscType) ? (
@@ -3961,7 +3986,7 @@ export default function App() {
                 type="button"
                 onClick={() => setActiveTab("menu_images")}
               >
-                Menu Images
+                {t("navigation.menuImages")}
               </button>
             ) : null}
             {dupeChecked ? (
@@ -3970,7 +3995,7 @@ export default function App() {
                 type="button"
                 onClick={() => setActiveTab("upload_images")}
               >
-                Upload Images
+                {t("uploadImages.title")}
               </button>
             ) : null}
             {dupeChecked ? (
@@ -3979,7 +4004,7 @@ export default function App() {
                 type="button"
                 onClick={() => setActiveTab("description_builder")}
               >
-                Description Builder
+                {t("navigation.descriptionBuilder")}
               </button>
             ) : null}
             {builderReady ? (
@@ -3988,7 +4013,7 @@ export default function App() {
                 type="button"
                 onClick={() => setActiveTab("upload")}
               >
-                Tracker Upload
+                {t("navigation.trackerUpload")}
               </button>
             ) : null}
           </div>
@@ -3998,21 +4023,21 @@ export default function App() {
               type="button"
               onClick={() => setActiveTab("settings")}
             >
-              <span>Settings</span>
+              <span>{t("navigation.settings")}</span>
             </button>
             <button
               className={sidebarButtonClass(activeTab === "logging")}
               type="button"
               onClick={() => setActiveTab("logging")}
             >
-              <span>Logging</span>
+              <span>{t("navigation.logging")}</span>
             </button>
             <button
               className={sidebarButtonClass(activeTab === "history")}
               type="button"
               onClick={() => setActiveTab("history")}
             >
-              <span>History</span>
+              <span>{t("navigation.history")}</span>
             </button>
             <button
               className={cn(sidebarButtonClass(), "mt-0")}
@@ -4375,17 +4400,23 @@ export default function App() {
           <Dialog.Portal>
             <Dialog.Overlay className="lightbox-overlay" />
             <Dialog.Content className={`lightbox-content ${lightboxFit ? "fit" : "native"}`}>
-              <Dialog.Title className="sr-only">{lightboxAlt || "Preview"}</Dialog.Title>
+              <Dialog.Title className="sr-only">
+                {lightboxAlt || t("app.previewFallback")}
+              </Dialog.Title>
               <div className="lightbox-toolbar">
                 <button
                   className="lightbox-toggle"
                   type="button"
                   onClick={() => setLightboxFit((prev) => !prev)}
                 >
-                  {lightboxFit ? "Actual size" : "Fit to screen"}
+                  {lightboxFit ? t("app.actualSize") : t("app.fitToScreen")}
                 </button>
               </div>
-              <img className="lightbox-image" src={lightboxImage} alt={lightboxAlt || "Preview"} />
+              <img
+                className="lightbox-image"
+                src={lightboxImage}
+                alt={lightboxAlt || t("app.previewFallback")}
+              />
             </Dialog.Content>
           </Dialog.Portal>
         </Dialog.Root>
@@ -4401,17 +4432,17 @@ export default function App() {
               <div className="host-browser-header">
                 <div>
                   <Dialog.Title asChild>
-                    <h2 className="label">Host browser</h2>
+                    <h2 className="label">{t("app.hostBrowser")}</h2>
                   </Dialog.Title>
                   <Dialog.Description asChild>
                     <p className="mono host-browser-path">
-                      {hostBrowser?.currentPath || "Computer"}
+                      {hostBrowser?.currentPath || t("common.computer")}
                     </p>
                   </Dialog.Description>
                 </div>
                 <Dialog.Close asChild>
                   <button className="ghost" type="button">
-                    Close
+                    {t("common.close")}
                   </button>
                 </Dialog.Close>
               </div>
@@ -4422,7 +4453,7 @@ export default function App() {
                   disabled={hostBrowserLoading || !hostBrowser?.parentPath}
                   onClick={() => void browseHostDirectory(hostBrowser?.parentPath || "")}
                 >
-                  Up
+                  {t("app.up")}
                 </button>
                 <button
                   className="ghost"
@@ -4430,7 +4461,7 @@ export default function App() {
                   disabled={hostBrowserLoading}
                   onClick={() => void browseHostDirectory("")}
                 >
-                  Roots
+                  {t("app.roots")}
                 </button>
                 {hostBrowserMode === "folder" && hostBrowser?.currentPath ? (
                   <button
@@ -4439,27 +4470,27 @@ export default function App() {
                     disabled={hostBrowserLoading}
                     onClick={() => void selectHostPath(hostBrowser.currentPath, true)}
                   >
-                    Select folder
+                    {t("app.selectFolder")}
                   </button>
                 ) : null}
                 <label className="host-browser-search" htmlFor="host-browser-search">
-                  <span>Search</span>
+                  <span>{t("common.search")}</span>
                   <input
                     id="host-browser-search"
                     className="host-browser-search__input"
                     value={hostBrowserSearch}
                     onChange={(event) => setHostBrowserSearch(event.target.value)}
-                    placeholder="Filter current path"
+                    placeholder={t("app.filterPath")}
                     disabled={hostBrowserLoading || !hostBrowser}
                   />
                 </label>
               </div>
               {hostBrowserError ? <p className="error">{hostBrowserError}</p> : null}
-              {hostBrowserLoading ? <p className="muted">Loading host paths...</p> : null}
+              {hostBrowserLoading ? <p className="muted">{t("app.loadingPaths")}</p> : null}
               {!hostBrowserLoading && hostBrowser ? (
                 <div className="host-browser-list">
                   {hostBrowserEntries.length === 0 ? (
-                    <p className="muted host-browser-empty">No matching paths.</p>
+                    <p className="muted host-browser-empty">{t("app.noMatchingPaths")}</p>
                   ) : (
                     hostBrowserEntries.map((entry, index) => (
                       <div
@@ -4484,7 +4515,7 @@ export default function App() {
                         </span>
                         <span className="host-browser-entry__meta">
                           {entry.isDir
-                            ? "Folder"
+                            ? t("app.folder")
                             : `${Math.round(entry.size / 1024).toLocaleString()} KiB`}
                         </span>
                         <span className="host-browser-entry__actions">
@@ -4497,7 +4528,7 @@ export default function App() {
                                 void browseHostDirectory(entry.path);
                               }}
                             >
-                              Open
+                              {t("common.open")}
                             </button>
                           ) : null}
                           {(hostBrowserMode === "folder" && entry.isDir) ||
@@ -4510,7 +4541,7 @@ export default function App() {
                                 void selectHostPath(entry.path, entry.isDir);
                               }}
                             >
-                              Select
+                              {t("common.select")}
                             </button>
                           ) : null}
                         </span>

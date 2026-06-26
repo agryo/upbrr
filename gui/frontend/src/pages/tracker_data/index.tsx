@@ -3,6 +3,7 @@
 
 import { useMemo } from "react";
 import type { Dispatch, SetStateAction } from "react";
+import { useTranslation } from "../../i18n";
 import RenderedDescription from "../../components/RenderedDescription";
 import { Button } from "../../components/ui/button";
 import { TrackerIconImage } from "../../components/ui/tracker-icon";
@@ -23,6 +24,8 @@ type Props = {
 };
 
 export default function TrackerDataPage(props: Props) {
+  const { t } = useTranslation();
+
   const {
     preview,
     renderedDescriptions,
@@ -64,12 +67,12 @@ export default function TrackerDataPage(props: Props) {
   return (
     <section className="flex flex-col gap-3">
       <header className="max-w-3xl">
-        <p className="eyebrow">Tracker Data</p>
-        <h1>Input Metadata</h1>
-        <p className="subtitle">Tracker-provided metadata, descriptions, and images.</p>
+        <p className="eyebrow">upbrr</p>
+        <h1>{t("trackerData.title")}</h1>
+        <p className="subtitle">{t("trackerData.subtitle")}</p>
       </header>
       {preview.TrackerData.length === 0 ? (
-        <p className="muted">No tracker data available.</p>
+        <p className="muted">{t("trackerData.noTrackerData")}</p>
       ) : (
         <div className="grid gap-3">
           {trackerDataOrdered.items.map((item, index) => {
@@ -80,6 +83,7 @@ export default function TrackerDataPage(props: Props) {
             const isPrimary = index === trackerDataOrdered.primaryIndex;
             const iconSrc = trackerIconFor(trackerIconSrcByName, item.Tracker);
             const hideTrackerName = faviconOnly && useFavicons;
+            const trackerDisplayName = item.Tracker || t("common.unknown");
             return (
               <details
                 className="overflow-hidden rounded-lg border border-white/10 bg-[rgba(12,16,26,0.78)]"
@@ -88,7 +92,7 @@ export default function TrackerDataPage(props: Props) {
               >
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 font-semibold marker:content-[''] [&::-webkit-details-marker]:hidden">
                   <span
-                    aria-label={hideTrackerName ? item.Tracker || "Unknown" : undefined}
+                    aria-label={hideTrackerName ? trackerDisplayName : undefined}
                     className="flex items-center gap-2 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
                   >
                     <TrackerIconImage
@@ -96,21 +100,21 @@ export default function TrackerDataPage(props: Props) {
                       iconSrc={iconSrc}
                       enabled={useFavicons}
                     />
-                    {hideTrackerName ? null : item.Tracker || "Unknown"}
+                    {hideTrackerName ? null : trackerDisplayName}
                   </span>
                   <span className="whitespace-nowrap text-sm font-medium text-[var(--muted)]">
-                    Torrent ID: {item.TrackerID || "-"}
+                    {t("trackerData.torrentId")}: {item.TrackerID || "-"}
                   </span>
                 </summary>
                 <div className="grid gap-3 border-t border-white/10 px-3 pb-3 pt-2">
                   <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-2">
                     <div>
-                      <p className="label">Tracker</p>
+                      <p className="label">{t("trackerData.tracker")}</p>
                       {item.TorrentURL ? (
                         <a
                           className="tracker-link flex items-center gap-1.5"
                           href={item.TorrentURL}
-                          aria-label={hideTrackerName ? item.Tracker || "Unknown" : undefined}
+                          aria-label={hideTrackerName ? trackerDisplayName : undefined}
                           target="_blank"
                           rel="noreferrer"
                           onAuxClick={handleExternalLinkClick}
@@ -121,11 +125,11 @@ export default function TrackerDataPage(props: Props) {
                             iconSrc={iconSrc}
                             enabled={useFavicons}
                           />
-                          {hideTrackerName ? null : item.Tracker || "Unknown"}
+                          {hideTrackerName ? null : trackerDisplayName}
                         </a>
                       ) : (
                         <div
-                          aria-label={hideTrackerName ? item.Tracker || "Unknown" : undefined}
+                          aria-label={hideTrackerName ? trackerDisplayName : undefined}
                           className="value flex items-center gap-1.5"
                         >
                           <TrackerIconImage
@@ -133,58 +137,58 @@ export default function TrackerDataPage(props: Props) {
                             iconSrc={iconSrc}
                             enabled={useFavicons}
                           />
-                          {hideTrackerName ? null : <span>{item.Tracker || "Unknown"}</span>}
+                          {hideTrackerName ? null : <span>{trackerDisplayName}</span>}
                         </div>
                       )}
                     </div>
                     <div>
-                      <p className="label">Matched</p>
-                      <p className="value">{item.Matched ? "Yes" : "No"}</p>
+                      <p className="label">{t("trackerData.matched")}</p>
+                      <p className="value">{item.Matched ? t("common.yes") : t("common.no")}</p>
                     </div>
                     <div>
-                      <p className="label">Updated</p>
+                      <p className="label">{t("trackerData.updated")}</p>
                       <p className="value">{item.UpdatedAt || "-"}</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2">
                     <div className="min-w-0">
-                      <p className="label">Torrent ID</p>
+                      <p className="label">{t("trackerData.torrentId")}</p>
                       <p className="value mono [overflow-wrap:anywhere]">{item.TrackerID || "-"}</p>
                     </div>
                     <div className="min-w-0">
-                      <p className="label">Info Hash</p>
+                      <p className="label">{t("trackerData.infoHash")}</p>
                       <p className="value mono [overflow-wrap:anywhere]">{item.InfoHash || "-"}</p>
                     </div>
                     <div className="min-w-0">
-                      <p className="label">Category</p>
+                      <p className="label">{t("trackerData.category")}</p>
                       <p className="value [overflow-wrap:anywhere]">{item.Category || "-"}</p>
                     </div>
                     <div className="min-w-0">
-                      <p className="label">Filename</p>
+                      <p className="label">{t("trackerData.filename")}</p>
                       <p className="value [overflow-wrap:anywhere]">{item.Filename || "-"}</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-2">
                     <div>
-                      <p className="label">TMDB</p>
+                      <p className="label">{t("trackerData.tmdb")}</p>
                       <p className="value mono">{item.TMDBID || 0}</p>
                     </div>
                     <div>
-                      <p className="label">IMDB</p>
+                      <p className="label">{t("trackerData.imdb")}</p>
                       <p className="value mono">{item.IMDBID || 0}</p>
                     </div>
                     <div>
-                      <p className="label">TVDB</p>
+                      <p className="label">{t("trackerData.tvdb")}</p>
                       <p className="value mono">{item.TVDBID || 0}</p>
                     </div>
                     <div>
-                      <p className="label">MAL</p>
+                      <p className="label">{t("trackerData.mal")}</p>
                       <p className="value mono">{item.MALID || 0}</p>
                     </div>
                   </div>
                   <div>
                     <div className="flex items-center justify-between gap-2">
-                      <h2>Description</h2>
+                      <h2>{t("trackerData.description")}</h2>
                       {item.DescriptionHTML ? (
                         <Button
                           className="h-7 rounded-full px-2 text-xs"
@@ -196,7 +200,7 @@ export default function TrackerDataPage(props: Props) {
                             }))
                           }
                         >
-                          {isRendered ? "Show raw" : "Render"}
+                          {isRendered ? t("trackerData.showRaw") : t("trackerData.render")}
                         </Button>
                       ) : null}
                     </div>
@@ -204,14 +208,14 @@ export default function TrackerDataPage(props: Props) {
                       <RenderedDescription html={renderedHTML} />
                     ) : (
                       <p className="tracker-description">
-                        {item.Description || "No description provided."}
+                        {item.Description || t("trackerData.noDescription")}
                       </p>
                     )}
                   </div>
                   <div>
-                    <h2>Images</h2>
+                    <h2>{t("trackerData.images")}</h2>
                     {item.ImageURLs.length === 0 ? (
-                      <p className="muted">No images provided.</p>
+                      <p className="muted">{t("trackerData.noImages")}</p>
                     ) : (
                       <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-2">
                         {item.ImageURLs.map((url, imageIndex) => (
@@ -221,13 +225,15 @@ export default function TrackerDataPage(props: Props) {
                             key={`${url}-${imageIndex}`}
                             onClick={() => {
                               setLightboxImage(url);
-                              setLightboxAlt(`${item.Tracker || "Tracker"} image`);
+                              setLightboxAlt(
+                                t("trackerData.imageAlt", { tracker: trackerDisplayName }),
+                              );
                             }}
                           >
                             <img
                               className="w-full rounded-lg border border-white/10"
                               src={url}
-                              alt="Tracker"
+                              alt={t("trackerData.imageAlt", { tracker: trackerDisplayName })}
                               loading="lazy"
                             />
                           </button>

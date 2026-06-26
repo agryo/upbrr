@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "../../i18n";
 import type { HistoryEntry, HistoryOverview } from "../../types";
 import { cn } from "../../utils/cn";
 
@@ -25,26 +26,27 @@ const formatLastUpload = (
   latestUploadStatus: string,
   statusLabel: string,
   latestUploadAt: string,
+  t: (key: string) => string,
 ) => {
   if (!isUploadedStatus(latestUploadStatus) && !isUploadedStatus(statusLabel)) {
-    return "never";
+    return t("common.never");
   }
   if (!latestUploadAt) {
-    return "never";
+    return t("common.never");
   }
   return formatDate(latestUploadAt);
 };
 
-const releaseLabel = (entry: HistoryEntry) => {
-  const title = entry.ReleaseTitle?.trim() || "Untitled release";
+const releaseLabel = (entry: HistoryEntry, t: (key: string) => string) => {
+  const title = entry.ReleaseTitle?.trim() || t("history.untitledRelease");
   const source = entry.ReleaseSource?.trim();
   const resolution = entry.ReleaseResolution?.trim();
   const extras = [source, resolution].filter(Boolean).join(" • ");
   return extras ? `${title} (${extras})` : title;
 };
 
-const releaseLabelFromOverview = (overview: HistoryOverview) => {
-  const title = overview.ReleaseTitle?.trim() || "Untitled release";
+const releaseLabelFromOverview = (overview: HistoryOverview, t: (key: string) => string) => {
+  const title = overview.ReleaseTitle?.trim() || t("history.untitledRelease");
   const source = overview.ReleaseSource?.trim();
   const resolution = overview.ReleaseResolution?.trim();
   const extras = [source, resolution].filter(Boolean).join(" • ");
@@ -56,6 +58,8 @@ type Props = {
 };
 
 export default function HistoryPage({ onReleaseDeleted }: Props) {
+  const { t } = useTranslation();
+
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [selectedPath, setSelectedPath] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -168,7 +172,7 @@ export default function HistoryPage({ onReleaseDeleted }: Props) {
       setError("Delete is unavailable in this build.");
       return;
     }
-    const confirmed = window.confirm("Remove this stored release and all associated stored files?");
+    const confirmed = window.confirm(t("history.confirmDelete"));
     if (!confirmed) {
       return;
     }
@@ -196,34 +200,32 @@ export default function HistoryPage({ onReleaseDeleted }: Props) {
     <div className="content-stack">
       <header className="hero">
         <p className="eyebrow">upbrr</p>
-        <h1>History</h1>
-        <p className="subtitle">
-          Review previously processed releases stored in SQLite and inspect full stored details.
-        </p>
+        <h1>{t("navigation.history")}</h1>
+        <p className="subtitle">{t("history.subtitle")}</p>
       </header>
 
       <section className="panel grid min-h-[560px] gap-3 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
         <aside className="rounded-lg border border-white/10 bg-white/5 p-3">
           <div className="mb-2">
-            <p className="label">Stored releases</p>
-            <p className="helper">Most recently updated first</p>
+            <p className="label">{t("history.storedReleases")}</p>
+            <p className="helper">{t("history.mostRecentFirst")}</p>
             <label className="mt-2 grid gap-1.5">
-              <span className="label">Search by title</span>
+              <span className="label">{t("history.searchByTitle")}</span>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Filter titles"
+                placeholder={t("history.filterTitles")}
               />
             </label>
           </div>
 
-          {loading ? <p className="muted">Loading history...</p> : null}
+          {loading ? <p className="muted">{t("history.loading")}</p> : null}
           {!loading && entries.length === 0 ? (
-            <p className="muted">No stored releases found.</p>
+            <p className="muted">{t("history.noStoredReleases")}</p>
           ) : null}
           {!loading && entries.length > 0 && filteredEntries.length === 0 ? (
-            <p className="muted">No releases match the current title filter.</p>
+            <p className="muted">{t("history.noMatches")}</p>
           ) : null}
 
           <div className="grid max-h-[520px] gap-1.5 overflow-y-auto">
@@ -245,13 +247,13 @@ export default function HistoryPage({ onReleaseDeleted }: Props) {
                     entry.SourcePath === selectedPath ? "text-[var(--text)]" : "text-inherit",
                   )}
                 >
-                  {releaseLabel(entry)}
+                  {releaseLabel(entry, t)}
                 </span>
                 <span className="text-xs text-[var(--muted)]">
-                  {entry.LatestUploadStatus || "Stored"}
+                  {entry.LatestUploadStatus || t("history.statusStored")}
                 </span>
                 <span className="text-xs text-[var(--muted)]">
-                  Updated {formatDate(entry.MetadataUpdatedAt)}
+                  {t("common.updated")} {formatDate(entry.MetadataUpdatedAt)}
                 </span>
               </button>
             ))}
@@ -259,10 +261,10 @@ export default function HistoryPage({ onReleaseDeleted }: Props) {
         </aside>
 
         <div className="overflow-y-auto rounded-lg border border-white/10 bg-white/5 p-3">
-          {detailLoading ? <p className="muted">Loading overview...</p> : null}
+          {detailLoading ? <p className="muted">{t("history.loadingOverview")}</p> : null}
 
           {!detailLoading && !overview ? (
-            <p className="muted">Select a stored release to view details.</p>
+            <p className="muted">{t("history.selectRelease")}</p>
           ) : null}
 
           {overview ? (
@@ -276,34 +278,35 @@ export default function HistoryPage({ onReleaseDeleted }: Props) {
                     void handleDeleteRelease();
                   }}
                 >
-                  {deleting ? "Removing..." : "Remove from database"}
+                  {deleting ? t("history.removing") : t("history.removeFromDatabase")}
                 </button>
               </div>
 
               <div className="summary">
                 <div>
-                  <p className="label">Release</p>
+                  <p className="label">{t("history.release")}</p>
                   <p className="value">
                     {selectedEntry
-                      ? releaseLabel(selectedEntry)
-                      : releaseLabelFromOverview(overview)}
+                      ? releaseLabel(selectedEntry, t)
+                      : releaseLabelFromOverview(overview, t)}
                   </p>
                 </div>
                 <div>
-                  <p className="label">Status</p>
-                  <p className="value">{overview.StatusLabel || "Stored"}</p>
+                  <p className="label">{t("common.status")}</p>
+                  <p className="value">{overview.StatusLabel || t("history.statusStored")}</p>
                 </div>
                 <div>
-                  <p className="label">Metadata Updated</p>
+                  <p className="label">{t("history.metadataUpdated")}</p>
                   <p className="value">{formatDate(overview.MetadataUpdatedAt)}</p>
                 </div>
                 <div>
-                  <p className="label">Last Upload</p>
+                  <p className="label">{t("history.lastUpload")}</p>
                   <p className="value">
                     {formatLastUpload(
                       overview.LatestUploadStatus,
                       overview.StatusLabel,
                       overview.LatestUploadAt,
+                      t,
                     )}
                   </p>
                 </div>
@@ -311,30 +314,60 @@ export default function HistoryPage({ onReleaseDeleted }: Props) {
 
               <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-2 [&_h3]:mb-2 [&_h3]:mt-0 [&_h3]:text-sm">
                 <article className="rounded-lg border border-white/10 bg-[var(--panel-light)] p-2.5">
-                  <h3>Path</h3>
+                  <h3>{t("common.path")}</h3>
                   <p className="mono">{overview.SourcePath}</p>
                 </article>
 
                 <article className="rounded-lg border border-white/10 bg-[var(--panel-light)] p-2.5 [&_p]:mb-1 [&_p]:mt-0">
-                  <h3>External IDs</h3>
-                  <p>TMDB: {overview.ExternalIDs?.TMDBID || 0}</p>
-                  <p>IMDb: {overview.ExternalIDs?.IMDBID || 0}</p>
-                  <p>TVDB: {overview.ExternalIDs?.TVDBID || 0}</p>
-                  <p>TVmaze: {overview.ExternalIDs?.TVmazeID || 0}</p>
+                  <h3>{t("history.externalIDs")}</h3>
+                  <p>
+                    {t("trackerData.tmdb")}: {overview.ExternalIDs?.TMDBID || 0}
+                  </p>
+                  <p>
+                    {t("trackerData.imdb")}: {overview.ExternalIDs?.IMDBID || 0}
+                  </p>
+                  <p>
+                    {t("trackerData.tvdb")}: {overview.ExternalIDs?.TVDBID || 0}
+                  </p>
+                  <p>
+                    {t("trackerData.tvmazeId")}: {overview.ExternalIDs?.TVmazeID || 0}
+                  </p>
                 </article>
 
                 <article className="rounded-lg border border-white/10 bg-[var(--panel-light)] p-2.5 [&_p]:mb-1 [&_p]:mt-0">
-                  <h3>Counts</h3>
-                  <p>Tracker metadata: {overview.TrackerMetadata?.length || 0}</p>
-                  <p>Rule failures: {overview.TrackerRuleFailures?.length || 0}</p>
-                  <p>Screenshots: {overview.Screenshots?.length || 0}</p>
-                  <p>Final selections: {overview.FinalSelections?.length || 0}</p>
-                  <p>Uploaded images: {overview.UploadedImages?.length || 0}</p>
-                  <p>Upload history: {overview.UploadHistory?.length || 0}</p>
+                  <h3>{t("history.counts")}</h3>
+                  <p>
+                    {t("history.trackerMetadataCount", {
+                      count: overview.TrackerMetadata?.length || 0,
+                    })}
+                  </p>
+                  <p>
+                    {t("history.ruleFailuresCount", {
+                      count: overview.TrackerRuleFailures?.length || 0,
+                    })}
+                  </p>
+                  <p>
+                    {t("history.screenshotsCount", { count: overview.Screenshots?.length || 0 })}
+                  </p>
+                  <p>
+                    {t("history.finalSelectionsCount", {
+                      count: overview.FinalSelections?.length || 0,
+                    })}
+                  </p>
+                  <p>
+                    {t("history.uploadedImagesCount", {
+                      count: overview.UploadedImages?.length || 0,
+                    })}
+                  </p>
+                  <p>
+                    {t("history.uploadHistoryCount", {
+                      count: overview.UploadHistory?.length || 0,
+                    })}
+                  </p>
                 </article>
 
                 <article className="col-span-full rounded-lg border border-white/10 bg-[var(--panel-light)] p-2.5">
-                  <h3>Description Overrides</h3>
+                  <h3>{t("history.descriptionOverrides")}</h3>
                   {descriptionOverrides.length ? (
                     <ul className="m-0 grid gap-1 pl-4">
                       {descriptionOverrides.map((override, index) => {
@@ -343,35 +376,35 @@ export default function HistoryPage({ onReleaseDeleted }: Props) {
                           <li key={`${groupKey}-${override.UpdatedAt}-${index}`}>
                             <strong>{groupKey}</strong>
                             <pre className="m-0 max-h-[220px] overflow-auto whitespace-pre-wrap rounded-md bg-black/10 p-2 text-xs [overflow-wrap:anywhere]">
-                              {override.Description?.trim() || "(empty)"}
+                              {override.Description?.trim() || t("history.empty")}
                             </pre>
                           </li>
                         );
                       })}
                     </ul>
                   ) : (
-                    <p className="muted">(none)</p>
+                    <p className="muted">{t("history.empty")}</p>
                   )}
                 </article>
 
                 <article className="col-span-full rounded-lg border border-white/10 bg-[var(--panel-light)] p-2.5">
-                  <h3>Upload History</h3>
+                  <h3>{t("history.uploadHistory")}</h3>
                   {overview.UploadHistory?.length ? (
                     <ul className="m-0 grid gap-1 pl-4">
                       {overview.UploadHistory.map((row, index) => (
                         <li key={`${row.Tracker}-${row.CreatedAt}-${index}`}>
-                          <strong>{row.Tracker || "UNKNOWN"}</strong> — {row.Status || "unknown"} —{" "}
-                          {formatDate(row.CreatedAt)}
+                          <strong>{row.Tracker || "UNKNOWN"}</strong> —{" "}
+                          {row.Status || t("common.unknown")} — {formatDate(row.CreatedAt)}
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="muted">No upload records.</p>
+                    <p className="muted">{t("history.noUploadRecords")}</p>
                   )}
                 </article>
 
                 <article className="col-span-full rounded-lg border border-white/10 bg-[var(--panel-light)] p-2.5">
-                  <h3>Tracker Rule Failures</h3>
+                  <h3>{t("history.trackerRuleFailures")}</h3>
                   {overview.TrackerRuleFailures?.length ? (
                     <ul className="m-0 grid gap-1 pl-4">
                       {overview.TrackerRuleFailures.map((failure, index) => (
@@ -382,26 +415,26 @@ export default function HistoryPage({ onReleaseDeleted }: Props) {
                       ))}
                     </ul>
                   ) : (
-                    <p className="muted">No tracker rule failures stored.</p>
+                    <p className="muted">{t("history.noRuleFailures")}</p>
                   )}
                 </article>
 
                 <article className="col-span-full rounded-lg border border-white/10 bg-[var(--panel-light)] p-2.5">
-                  <h3>External Metadata (raw)</h3>
+                  <h3>{t("history.externalMetadataRaw")}</h3>
                   <pre className="m-0 max-h-[220px] overflow-auto whitespace-pre-wrap rounded-md bg-black/10 p-2 text-xs [overflow-wrap:anywhere]">
                     {JSON.stringify(overview.ExternalMetadata || {}, null, 2)}
                   </pre>
                 </article>
 
                 <article className="col-span-full rounded-lg border border-white/10 bg-[var(--panel-light)] p-2.5">
-                  <h3>Release Overrides (raw)</h3>
+                  <h3>{t("history.releaseOverridesRaw")}</h3>
                   <pre className="m-0 max-h-[220px] overflow-auto whitespace-pre-wrap rounded-md bg-black/10 p-2 text-xs [overflow-wrap:anywhere]">
                     {JSON.stringify(overview.ReleaseNameOverrides || {}, null, 2)}
                   </pre>
                 </article>
 
                 <article className="col-span-full rounded-lg border border-white/10 bg-[var(--panel-light)] p-2.5">
-                  <h3>Metadata (raw)</h3>
+                  <h3>{t("history.metadataRaw")}</h3>
                   <pre className="m-0 max-h-[220px] overflow-auto whitespace-pre-wrap rounded-md bg-black/10 p-2 text-xs [overflow-wrap:anywhere]">
                     {JSON.stringify(overview.Metadata || {}, null, 2)}
                   </pre>

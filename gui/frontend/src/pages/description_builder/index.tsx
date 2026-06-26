@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import type { Dispatch, SetStateAction } from "react";
+import { useTranslation } from "../../i18n";
 import RenderedDescription from "../../components/RenderedDescription";
 import { TrackerIconImage } from "../../components/ui/tracker-icon";
 import type { TrackerIconCache } from "../../hooks/useTrackerIcons";
@@ -33,13 +34,14 @@ type Props = {
   saveBuilderDescription: (groupKey: string) => void;
 };
 
-const groupLabel = (groupKey: string, trackers: string[]) => {
+const groupLabel = (groupKey: string, trackers: string[], t: (key: string) => string) => {
   if (trackers.length > 0) return trackers.join(", ");
-  if (groupKey === "unit3d") return "Unit3D";
-  return groupKey || "Description";
+  if (groupKey === "unit3d") return t("descriptionBuilder.unit3d");
+  return groupKey || t("descriptionBuilder.description");
 };
 
 export default function DescriptionBuilderPage(props: Props) {
+  const { t } = useTranslation();
   const {
     path,
     builderPreview,
@@ -70,18 +72,17 @@ export default function DescriptionBuilderPage(props: Props) {
   return (
     <section className="flex flex-col gap-3">
       <header className="max-w-3xl">
-        <p className="eyebrow">Description Builder</p>
-        <h1>Customize Description</h1>
-        <p className="subtitle">
-          Edit tracker-group raw descriptions here. Tracker-specific formatting is applied from this
-          builder.
-        </p>
+        <p className="eyebrow">{t("descriptionBuilder.title")}</p>
+        <h1>{t("descriptionBuilder.title")}</h1>
+        <p className="subtitle">{t("descriptionBuilder.subtitle")}</p>
       </header>
 
       <section className="panel flex flex-wrap items-center justify-between gap-3 py-3">
         <div className="min-w-0">
-          <p className="label">Source path</p>
-          <p className="value [overflow-wrap:anywhere] text-sm">{path || "No path selected"}</p>
+          <p className="label">{t("descriptionBuilder.sourcePath")}</p>
+          <p className="value [overflow-wrap:anywhere] text-sm">
+            {path || t("descriptionBuilder.noPathSelected")}
+          </p>
         </div>
         <button
           className="ghost"
@@ -89,7 +90,7 @@ export default function DescriptionBuilderPage(props: Props) {
           onClick={refreshDescriptionBuilder}
           disabled={builderLoading || builderSaving || builderRenderLoading || !path.trim()}
         >
-          {builderRefreshing ? "Refreshing..." : "Refresh descriptions"}
+          {builderRefreshing ? t("descriptionBuilder.refreshing") : t("descriptionBuilder.refresh")}
         </button>
         {builderProgressMessage ? (
           <p className="m-0 basis-full text-right text-[0.82rem] text-[var(--muted)]">
@@ -104,16 +105,15 @@ export default function DescriptionBuilderPage(props: Props) {
       {builderLoading && groups.length === 0 ? (
         <section className="panel">
           <div className="mb-2 flex flex-col gap-1">
-            <h2>Building Descriptions</h2>
+            <h2>{t("descriptionBuilder.buildingTitle")}</h2>
           </div>
           <p className="muted">
-            {builderProgressMessage ||
-              "Preparing tracker-group descriptions and image-host adjustments..."}
+            {builderProgressMessage || t("descriptionBuilder.buildingSubtitle")}
           </p>
         </section>
       ) : groups.length === 0 ? (
         <section className="panel">
-          <p className="muted">No tracker descriptions generated yet.</p>
+          <p className="muted">{t("descriptionBuilder.noDescriptions")}</p>
         </section>
       ) : (
         groups.map((group, i) => {
@@ -125,7 +125,7 @@ export default function DescriptionBuilderPage(props: Props) {
           const renderedHTML = builderRenderedByGroup[groupKey] ?? seededRendered;
           const expanded = builderExpandedGroups[groupKey] ?? false;
           const trackers = (group.Trackers || []).map((tracker) => tracker.trim()).filter(Boolean);
-          const label = groupLabel(groupKey, trackers);
+          const label = groupLabel(groupKey, trackers, t);
           const hideTrackerNames = faviconOnly && useFavicons && trackers.length > 0;
           const imageHostWarnings = group.ImageHost?.Warnings || [];
 
@@ -151,8 +151,8 @@ export default function DescriptionBuilderPage(props: Props) {
                   </h2>
                   <p className="muted">
                     {group.HasOverride
-                      ? "Saved override active for this group."
-                      : "Using generated raw description."}
+                      ? t("descriptionBuilder.savedOverride")
+                      : t("descriptionBuilder.generatedDescription")}
                   </p>
                   {group.ImageHost?.Reuploaded && group.ImageHost?.Message ? (
                     <p className="muted">{group.ImageHost.Message}</p>
@@ -171,7 +171,9 @@ export default function DescriptionBuilderPage(props: Props) {
                         className="m-0 mt-1 rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-[0.82rem] text-amber-100 [overflow-wrap:anywhere]"
                         key={`${host || "host"}-${index}`}
                       >
-                        {host ? `${host} failed` : "Image host warning"}
+                        {host
+                          ? t("descriptionBuilder.imageHostFailed", { host })
+                          : t("descriptionBuilder.imageHostWarning")}
                         {message ? `: ${message}` : ""}
                       </p>
                     );
@@ -187,7 +189,7 @@ export default function DescriptionBuilderPage(props: Props) {
                     }))
                   }
                 >
-                  {expanded ? "Collapse" : "Expand"}
+                  {expanded ? t("descriptionBuilder.collapse") : t("descriptionBuilder.expand")}
                 </button>
               </div>
 
@@ -200,7 +202,9 @@ export default function DescriptionBuilderPage(props: Props) {
                       onClick={() => resetBuilderDescription(groupKey)}
                       disabled={builderLoading || builderSaving || !path.trim()}
                     >
-                      {builderLoading ? "Resetting..." : "Reset group"}
+                      {builderLoading
+                        ? t("descriptionBuilder.resetting")
+                        : t("descriptionBuilder.resetGroup")}
                     </button>
                     <button
                       className="ghost"
@@ -208,7 +212,9 @@ export default function DescriptionBuilderPage(props: Props) {
                       onClick={() => renderBuilderDescription(groupKey)}
                       disabled={builderRenderLoading}
                     >
-                      {builderRenderLoading ? "Rendering..." : "Render"}
+                      {builderRenderLoading
+                        ? t("descriptionBuilder.rendering")
+                        : t("descriptionBuilder.render")}
                     </button>
                     <button
                       className="primary"
@@ -216,16 +222,19 @@ export default function DescriptionBuilderPage(props: Props) {
                       onClick={() => saveBuilderDescription(groupKey)}
                       disabled={builderSaving || !path.trim()}
                     >
-                      {builderSaving ? "Saving..." : "Save group"}
+                      {builderSaving
+                        ? t("descriptionBuilder.saving")
+                        : t("descriptionBuilder.saveGroup")}
                     </button>
                   </div>
 
                   <section className="panel">
                     <div className="mb-2 flex flex-col gap-1">
-                      <h2>Raw Description</h2>
+                      <h2>{t("descriptionBuilder.rawDescription")}</h2>
                       <p className="muted">
-                        This final raw description is the upload source of truth for{" "}
-                        {hideTrackerNames ? "this group" : label}.
+                        {t("descriptionBuilder.rawDescriptionSubtitle", {
+                          label: hideTrackerNames ? t("common.thisGroup") : label,
+                        })}
                       </p>
                     </div>
                     <textarea
@@ -241,12 +250,12 @@ export default function DescriptionBuilderPage(props: Props) {
 
                   <section className="panel">
                     <div className="mb-2 flex flex-col gap-1">
-                      <h2>Rendered Raw Preview</h2>
+                      <h2>{t("descriptionBuilder.previewTitle")}</h2>
                     </div>
                     {renderedHTML ? (
                       <RenderedDescription html={renderedHTML} />
                     ) : (
-                      <p className="muted">No rendered preview yet.</p>
+                      <p className="muted">{t("descriptionBuilder.noPreview")}</p>
                     )}
                   </section>
                 </>

@@ -8,6 +8,7 @@ import { Button } from "../../components/ui/button";
 import { Switch } from "../../components/ui/switch";
 import { cn } from "../../utils/cn";
 import { handleExternalLinkClick } from "../../utils/externalLinks";
+import { useTranslation } from "../../i18n";
 import type {
   ApplicationInfo,
   ConfigMap,
@@ -17,11 +18,6 @@ import type {
 } from "../../types";
 
 type SettingsSection = { key: string; jsonKey: string; label: string };
-
-const applicationDetailsSection = {
-  key: "application_details",
-  label: "Application Details",
-};
 
 const settingsInputClass =
   "h-8 rounded-md border border-white/10 bg-slate-950/45 px-2.5 text-sm text-[var(--text)] outline-none transition placeholder:text-[var(--muted)] focus:border-[var(--accent-2)] focus:ring-2 focus:ring-[rgba(53,194,193,0.18)]";
@@ -122,6 +118,8 @@ export default function SettingsPage(props: Props) {
     sectionFieldMeta,
   } = props;
 
+  const { t, locale, setLocale } = useTranslation();
+
   const [warningsExpanded, setWarningsExpanded] = useState(false);
   const [applicationInfo, setApplicationInfo] = useState<ApplicationInfo | null>(null);
   const [applicationInfoError, setApplicationInfoError] = useState("");
@@ -129,12 +127,17 @@ export default function SettingsPage(props: Props) {
   const [applicationInfoFetchedAt, setApplicationInfoFetchedAt] = useState<number | null>(null);
   const [uptimeTick, setUptimeTick] = useState(() => Date.now());
 
+  const applicationDetailsSection = {
+    key: "application_details",
+    label: t("settings.tabs.applicationDetails"),
+  };
+
   useEffect(() => {
     let cancelled = false;
     const getter = (globalThis.go?.guiapp?.App as AppBridgeWithApplicationInfo | undefined)
       ?.GetApplicationInfo;
     if (!getter) {
-      setApplicationInfoError("Application details are unavailable in this build.");
+      setApplicationInfoError(t("settings.applicationDetailsUnavailable"));
       return () => {
         cancelled = true;
       };
@@ -165,7 +168,7 @@ export default function SettingsPage(props: Props) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!applicationInfo) {
@@ -185,13 +188,10 @@ export default function SettingsPage(props: Props) {
   const uptimeValue = applicationInfo ? formatApplicationUptime(uptimeSeconds) : "";
   const applicationDetailsPanel = (
     <div className="settings-subgroup settings-subgroup--application">
-      <p className="helper">
-        Read-only build and runtime details for this install. Auth, bind, and storage paths are
-        intentionally excluded.
-      </p>
+      <p className="helper">{t("settings.applicationDetailsHelper")}</p>
       <div className="settings-details-grid">
         <div className="settings-detail-card">
-          <p className="settings-detail-card__label">Project</p>
+          <p className="settings-detail-card__label">{t("settings.project")}</p>
           <p className="settings-detail-card__value">
             <a
               href="https://github.com/autobrr/upbrr"
@@ -207,29 +207,29 @@ export default function SettingsPage(props: Props) {
         {applicationInfo ? (
           <>
             <div className="settings-detail-card">
-              <p className="settings-detail-card__label">Version</p>
+              <p className="settings-detail-card__label">{t("settings.version")}</p>
               <p className="settings-detail-card__value mono">
-                {applicationInfo.version || "Unavailable"}
+                {applicationInfo.version || t("common.unavailable")}
               </p>
             </div>
             <div className="settings-detail-card">
-              <p className="settings-detail-card__label">Build</p>
+              <p className="settings-detail-card__label">{t("settings.build")}</p>
               <p className="settings-detail-card__value mono">
-                {applicationInfo.buildIdentifier || "Unavailable"}
+                {applicationInfo.buildIdentifier || t("common.unavailable")}
               </p>
             </div>
             <div className="settings-detail-card">
-              <p className="settings-detail-card__label">Go Runtime</p>
+              <p className="settings-detail-card__label">{t("settings.goRuntime")}</p>
               <p className="settings-detail-card__value mono">{applicationInfo.goVersion}</p>
             </div>
             <div className="settings-detail-card">
-              <p className="settings-detail-card__label">Platform</p>
+              <p className="settings-detail-card__label">{t("settings.platform")}</p>
               <p className="settings-detail-card__value mono">
                 {applicationInfo.goos}/{applicationInfo.goarch}
               </p>
             </div>
             <div className="settings-detail-card">
-              <p className="settings-detail-card__label">Uptime</p>
+              <p className="settings-detail-card__label">{t("settings.uptime")}</p>
               <p className="settings-detail-card__value mono">
                 {uptimeValue || applicationInfo.uptime}
               </p>
@@ -237,7 +237,7 @@ export default function SettingsPage(props: Props) {
           </>
         ) : null}
       </div>
-      {applicationInfoLoading ? <p className="muted">Loading application details...</p> : null}
+      {applicationInfoLoading ? <p className="muted">{t("settings.loadingAppDetails")}</p> : null}
       {applicationInfoError ? <p className="error">{applicationInfoError}</p> : null}
     </div>
   );
@@ -246,35 +246,47 @@ export default function SettingsPage(props: Props) {
     <div className="content-stack">
       <header className="hero">
         <p className="eyebrow">upbrr</p>
-        <h1>Settings</h1>
-        <p className="subtitle">
-          Edit settings by section. Changes apply immediately and are saved to SQLite.
-        </p>
+        <h1>{t("settings.title")}</h1>
+        <p className="subtitle">{t("settings.subtitle")}</p>
       </header>
 
       <section className="panel">
         <div className="settings-header">
           <div className="settings-meta">
-            <p className="label">Configuration</p>
-            <p className="helper">Invalid changes will be rejected with a validation error.</p>
+            <p className="label">{t("settings.configuration")}</p>
+            <p className="helper">{t("settings.invalidChangesHelper")}</p>
+          </div>
+          <div className="settings-language" style={{ marginRight: "1rem" }}>
+            <label className="settings-field" style={{ marginBottom: 0 }}>
+              <span>{t("common.language")}</span>
+              <select
+                value={locale}
+                onChange={(e) => setLocale(e.target.value as "en" | "pt-BR")}
+                className="h-8 rounded-md border border-white/10 bg-slate-950/45 px-2.5 text-sm text-[var(--text)] outline-none transition placeholder:text-[var(--muted)] focus:border-[var(--accent-2)] focus:ring-2 focus:ring-[rgba(53,194,193,0.18)]"
+                disabled={settingsLoading}
+              >
+                <option value="en">{t("common.languageEnglish")}</option>
+                <option value="pt-BR">{t("common.languagePortuguese")}</option>
+              </select>
+            </label>
           </div>
           <div className="settings-actions">
             <Button type="button" onClick={loadSettings} disabled={settingsLoading}>
-              Reload
+              {t("settings.reload")}
             </Button>
             <Button
               type="button"
               onClick={handleExportSettings}
               disabled={settingsLoading || settingsExporting || settingsImporting}
             >
-              {settingsExporting ? "Exporting..." : "Export"}
+              {settingsExporting ? t("settings.exporting") : t("settings.export")}
             </Button>
             <Button
               type="button"
               onClick={handleImportConfig}
               disabled={settingsLoading || settingsExporting || settingsImporting}
             >
-              {settingsImporting ? "Importing..." : "Import"}
+              {settingsImporting ? t("settings.importing") : t("settings.import")}
             </Button>
             <Button
               variant="primary"
@@ -282,7 +294,7 @@ export default function SettingsPage(props: Props) {
               onClick={handleSaveSettings}
               disabled={settingsLoading || settingsExporting || settingsImporting || !settingsDirty}
             >
-              Save
+              {t("settings.save")}
             </Button>
           </div>
         </div>
@@ -344,8 +356,11 @@ export default function SettingsPage(props: Props) {
                     className="config-status-banner__toggle"
                     onClick={() => setWarningsExpanded((prev) => !prev)}
                   >
-                    {warningsExpanded ? "Hide" : "Show"} {configOpStatus.warnings.length} warning
-                    {configOpStatus.warnings.length !== 1 ? "s" : ""}
+                    {warningsExpanded ? t("common.hide") : t("common.show")}{" "}
+                    {configOpStatus.warnings.length}{" "}
+                    {configOpStatus.warnings.length === 1
+                      ? t("common.warning")
+                      : t("common.warnings")}
                   </button>
                   {warningsExpanded ? (
                     <ul className="config-status-banner__warning-list">
@@ -361,7 +376,7 @@ export default function SettingsPage(props: Props) {
               type="button"
               className="config-status-banner__dismiss"
               onClick={dismissConfigOpStatus}
-              aria-label="Dismiss"
+              aria-label={t("settings.dismiss")}
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path
@@ -411,45 +426,49 @@ export default function SettingsPage(props: Props) {
             {settingsSection === applicationDetailsSection.key ? applicationDetailsPanel : null}
             {settingsSection !== applicationDetailsSection.key && webAuthAvailable ? (
               <details className="settings-subgroup settings-subgroup--collapsible settings-subgroup--auth">
-                <summary>Secret Encryption</summary>
+                <summary>{t("settings.secretEncryption")}</summary>
                 <div>
-                  <p className="helper">
-                    Desktop installs can keep using plaintext secrets, or you can create
-                    <code> web-auth.json </code>
-                    to enable encrypted secret storage for future saves and exports.
-                  </p>
+                  <p className="helper">{t("settings.secretEncryptionHelper")}</p>
                   <div className="settings-auth-status">
                     <span
                       className={`settings-auth-badge ${webAuthStatus?.usable ? "is-ready" : webAuthStatus?.exists ? "is-warning" : "is-idle"}`}
                     >
                       {webAuthLoading
-                        ? "Checking..."
+                        ? t("settings.checking")
                         : webAuthStatus?.usable
-                          ? "Encryption enabled"
+                          ? t("settings.encryptionEnabled")
                           : webAuthStatus?.exists
-                            ? "Auth file invalid"
-                            : "Plaintext fallback active"}
+                            ? t("settings.authFileInvalid")
+                            : t("settings.plaintextFallback")}
                     </span>
                     {webAuthStatus?.path ? (
-                      <p className="muted">Path: {webAuthStatus.path}</p>
+                      <p className="muted">
+                        {t("settings.webAuthPath")} {webAuthStatus.path}
+                      </p>
                     ) : null}
                     {webAuthStatus?.message ? (
                       <p className="muted">{webAuthStatus.message}</p>
                     ) : null}
                     {webAuthStatus?.usable && webAuthStatus.username ? (
-                      <p className="muted">Configured user: {webAuthStatus.username}</p>
+                      <p className="muted">
+                        {t("settings.webAuthUser")} {webAuthStatus.username}
+                      </p>
                     ) : null}
                     {webAuthStatus?.browseRoot ? (
-                      <p className="muted">Web browse root: {webAuthStatus.browseRoot}</p>
+                      <p className="muted">
+                        {t("settings.webAuthBrowseRoot")} {webAuthStatus.browseRoot}
+                      </p>
                     ) : null}
                     {webAuthStatus?.allowUnrestrictedBrowse ? (
-                      <p className="muted">Web browse access: Unrestricted</p>
+                      <p className="muted">
+                        {t("settings.webAuthBrowseAccess")} {t("settings.webAuthUnrestricted")}
+                      </p>
                     ) : null}
                   </div>
                   {webAuthStatus?.canCreate ? (
                     <div className="settings-grid">
                       <label className="settings-field">
-                        <span>Username</span>
+                        <span>{t("settings.username")}</span>
                         <input
                           className={settingsInputClass}
                           value={webAuthUsername}
@@ -458,7 +477,7 @@ export default function SettingsPage(props: Props) {
                         />
                       </label>
                       <label className="settings-field">
-                        <span>Password</span>
+                        <span>{t("settings.password")}</span>
                         <input
                           className={settingsInputClass}
                           type="password"
@@ -468,7 +487,7 @@ export default function SettingsPage(props: Props) {
                         />
                       </label>
                       <label className="settings-field">
-                        <span>Confirm password</span>
+                        <span>{t("settings.confirmPassword")}</span>
                         <input
                           className={settingsInputClass}
                           type="password"
@@ -493,7 +512,7 @@ export default function SettingsPage(props: Props) {
                         !webAuthConfirm.trim()
                       }
                     >
-                      {webAuthCreating ? "Creating..." : "Create web-auth.json"}
+                      {webAuthCreating ? t("settings.creating") : t("settings.createWebAuth")}
                     </Button>
                   </div>
                   {webAuthError ? <p className="error">{webAuthError}</p> : null}
@@ -504,9 +523,9 @@ export default function SettingsPage(props: Props) {
               <div className="settings-form">
                 {showAdvancedToggle ? (
                   <div className="settings-switch-row">
-                    <span>Show advanced</span>
+                    <span>{t("settings.showAdvanced")}</span>
                     <Switch
-                      aria-label="Show advanced"
+                      aria-label={t("settings.showAdvanced")}
                       checked={advancedOpen}
                       onChange={(event) =>
                         setSettingsAdvanced((prev) => ({
@@ -556,7 +575,7 @@ export default function SettingsPage(props: Props) {
                 )}
               </div>
             ) : (
-              <p className="muted">Loading configuration...</p>
+              <p className="muted">{t("settings.loadingConfig")}</p>
             )}
           </div>
         </div>
@@ -589,23 +608,19 @@ export default function SettingsPage(props: Props) {
             </div>
             <div className="import-confirm-dialog__body">
               <AlertDialog.Title asChild>
-                <h2 className="import-confirm-dialog__title">Replace current configuration?</h2>
+                <h2 className="import-confirm-dialog__title">{t("settings.importConfirmTitle")}</h2>
               </AlertDialog.Title>
               <AlertDialog.Description asChild>
                 <p className="import-confirm-dialog__message">
-                  Importing a configuration file will overwrite your current settings in the
-                  database. This action cannot be undone.
+                  {t("settings.importConfirmMessage")}
                 </p>
               </AlertDialog.Description>
-              <p className="import-confirm-dialog__hint">
-                We strongly recommend exporting your current configuration first so you can restore
-                it if the imported file isn&apos;t what you expected.
-              </p>
+              <p className="import-confirm-dialog__hint">{t("settings.importConfirmHint")}</p>
             </div>
             <div className="import-confirm-dialog__actions">
               <AlertDialog.Cancel asChild>
                 <Button type="button" disabled={settingsImporting}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
               </AlertDialog.Cancel>
               <Button
@@ -613,7 +628,7 @@ export default function SettingsPage(props: Props) {
                 onClick={handleExportSettings}
                 disabled={settingsExporting || settingsImporting}
               >
-                {settingsExporting ? "Exporting..." : "Export current config"}
+                {settingsExporting ? t("settings.exporting") : t("settings.exportCurrentConfig")}
               </Button>
               <AlertDialog.Action asChild>
                 <Button
@@ -626,7 +641,7 @@ export default function SettingsPage(props: Props) {
                   }}
                   disabled={settingsImporting}
                 >
-                  {settingsImporting ? "Importing..." : "Choose file & import"}
+                  {settingsImporting ? t("settings.importing") : t("settings.chooseFileAndImport")}
                 </Button>
               </AlertDialog.Action>
             </div>

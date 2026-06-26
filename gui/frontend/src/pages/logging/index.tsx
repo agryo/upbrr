@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import LogSettingsPanel from "../../components/LogSettingsPanel";
+import { useTranslation } from "../../i18n";
 import type { ConfigMap, ConfigValue, FieldMeta } from "../../types";
 
 type Props = Readonly<{
@@ -31,19 +32,21 @@ export default function LoggingPage(props: Props) {
     sectionFieldMeta,
   } = props;
 
+  const { t } = useTranslation();
+
   return (
     <div className="content-stack">
       <header className="hero">
         <p className="eyebrow">upbrr</p>
-        <h1>Logging</h1>
-        <p className="subtitle">Monitor live logs and adjust logging settings.</p>
+        <h1>{t("logging.title")}</h1>
+        <p className="subtitle">{t("logging.subtitle")}</p>
       </header>
 
       <section className="panel">
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
-            <p className="label">Logging controls</p>
-            <p className="helper">Changes apply immediately and are saved to SQLite.</p>
+            <p className="label">{t("logging.controls")}</p>
+            <p className="helper">{t("logging.controlsSubtitle")}</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -52,7 +55,7 @@ export default function LoggingPage(props: Props) {
               onClick={loadSettings}
               disabled={settingsLoading}
             >
-              Reload
+              {t("common.reload")}
             </button>
             <button
               className="primary"
@@ -60,7 +63,7 @@ export default function LoggingPage(props: Props) {
               onClick={handleSaveSettings}
               disabled={settingsLoading || !settingsDirty}
             >
-              Save
+              {t("common.save")}
             </button>
           </div>
         </div>
@@ -76,7 +79,7 @@ export default function LoggingPage(props: Props) {
               />
             </div>
           ) : (
-            <p className="muted">Loading configuration...</p>
+            <p className="muted">{t("common.loading")}</p>
           )}
         </div>
 

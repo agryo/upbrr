@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "../i18n";
 import { Checkbox } from "./ui/checkbox";
 import { Switch } from "./ui/switch";
 import { cn } from "../utils/cn";
@@ -85,6 +86,8 @@ export default function LogSettingsPanel({
   updateConfigValue,
   fieldMeta,
 }: LogSettingsPanelProps) {
+  const { t } = useTranslation();
+
   const [logPath, setLogPath] = useState("");
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const [search, setSearch] = useState("");
@@ -129,30 +132,30 @@ export default function LogSettingsPanel({
     }
   };
 
-  const appendEntries = useCallback((incoming: LogEntry[]) => {
-    if (incoming.length === 0) return;
-    setEntries((prev) => {
-      // Recent-log backfills can overlap live stream events; logger IDs keep
-      // the rendered buffer idempotent across both sources. IDs restart with
-      // each logger instance, so include row content to survive stream rebinds.
-      const seenRows = new Set(prev.map(logEntryKey));
-      const uniqueIncoming = incoming.filter((entry) => {
-        const key = logEntryKey(entry);
-        if (seenRows.has(key)) return false;
-        seenRows.add(key);
-        return true;
+  const appendEntries = useCallback(
+    (incoming: LogEntry[]) => {
+      if (incoming.length === 0) return;
+      setEntries((prev) => {
+        const seenRows = new Set(prev.map(logEntryKey));
+        const uniqueIncoming = incoming.filter((entry) => {
+          const key = logEntryKey(entry);
+          if (seenRows.has(key)) return false;
+          seenRows.add(key);
+          return true;
+        });
+        if (uniqueIncoming.length === 0) return prev;
+        let next = [...prev, ...uniqueIncoming];
+        if (autoScrollRef.current && next.length > LOG_SOFT_CAP) {
+          next = next.slice(-LOG_SOFT_CAP);
+        } else if (!autoScrollRef.current && next.length > LOG_HARD_CAP) {
+          next = next.slice(-LOG_HARD_CAP);
+          setBufferWarning(t("logging.bufferCapped"));
+        }
+        return next;
       });
-      if (uniqueIncoming.length === 0) return prev;
-      let next = [...prev, ...uniqueIncoming];
-      if (autoScrollRef.current && next.length > LOG_SOFT_CAP) {
-        next = next.slice(-LOG_SOFT_CAP);
-      } else if (!autoScrollRef.current && next.length > LOG_HARD_CAP) {
-        next = next.slice(-LOG_HARD_CAP);
-        setBufferWarning("Log buffer capped. Oldest entries were dropped.");
-      }
-      return next;
-    });
-  }, []);
+    },
+    [t],
+  );
 
   /** Backfills buffered log entries only while the caller's effect is still active. */
   const fetchRecentLogs = useCallback(
@@ -217,7 +220,6 @@ export default function LogSettingsPanel({
       const start = globalThis.go?.guiapp?.App?.StartLogStream;
       const stop = globalThis.go?.guiapp?.App?.StopLogStream;
       if (!start) return;
-      // Tracks a stream that exists before event subscription cleanup is installed.
       let pendingStreamID = "";
 
       try {
@@ -241,8 +243,6 @@ export default function LogSettingsPanel({
           }
         };
         pendingStreamID = "";
-        // Backfill after subscribing to cover entries emitted between
-        // StartLogStream resolving and the event listener attaching.
         await fetchRecentLogs(() => active);
       } catch (err) {
         if (pendingStreamID && stop) {
@@ -313,15 +313,15 @@ export default function LogSettingsPanel({
       <div className="panel grid gap-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="label">Logging</p>
-            <p className="helper">Adjust log verbosity and file rotation.</p>
+            <p className="label">{t("logging.sectionTitle")}</p>
+            <p className="helper">{t("logging.verbosityHelper")}</p>
           </div>
         </div>
         <div className="settings-grid">
           {["Level", "FileEnabled", "MaxTotalSizeMB", "MaxFiles"].map((key) => {
             const meta = fieldMeta[key];
             if (key === "Level") {
-              const label = meta?.label ?? "Level";
+              const label = meta?.label ?? t("logging.levelLabel");
               return (
                 <label className="settings-field" key="Logging.Level">
                   <span>{label}</span>
@@ -344,8 +344,8 @@ export default function LogSettingsPanel({
           })}
         </div>
         <div className="grid gap-1 rounded-md border border-white/10 bg-[var(--panel-light)] px-3 py-2 break-all">
-          <span className="label">Log path</span>
-          <span className="value">{logPath || "Unavailable"}</span>
+          <span className="label">{t("logging.logPath")}</span>
+          <span className="value">{logPath || t("logging.logPathUnavailable")}</span>
         </div>
       </div>
 
@@ -360,18 +360,18 @@ export default function LogSettingsPanel({
                   : "bg-[var(--danger)] shadow-[0_0_10px_rgba(255,107,107,0.4)]",
               )}
             />
-            <span>{connected ? "Connected" : "Disconnected"}</span>
+            <span>{connected ? t("logging.connected") : t("logging.disconnected")}</span>
           </div>
           <div className="flex items-center gap-2">
             <button className="ghost" type="button" onClick={handleClearLogs}>
-              Clear
+              {t("common.clear")}
             </button>
             <div className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-sm font-semibold text-[var(--text)]">
-              <span>Auto-scroll</span>
+              <span>{t("logging.autoScroll")}</span>
               <Switch
-                aria-label="Auto-scroll logs"
+                aria-label={t("logging.autoScroll")}
                 checked={autoScroll}
-                onChange={(event) => setAutoScroll(event.target.checked)}
+                onCheckedChange={(checked) => setAutoScroll(checked)}
               />
             </div>
           </div>
@@ -397,7 +397,7 @@ export default function LogSettingsPanel({
           </div>
           <input
             className="min-w-[200px] flex-1 rounded-md border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-[var(--text)]"
-            placeholder="Search logs"
+            placeholder={t("logging.searchPlaceholder")}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
@@ -411,7 +411,7 @@ export default function LogSettingsPanel({
           ref={logStreamRef}
         >
           {filteredEntries.length === 0 ? (
-            <p className="muted">No log entries yet.</p>
+            <p className="muted">{t("logging.noEntries")}</p>
           ) : (
             filteredEntries.map((entry) => (
               <div
@@ -426,11 +426,13 @@ export default function LogSettingsPanel({
                   )}
                   type="button"
                   onClick={() => handleMuteMessage(entry.Message)}
-                  title="Mute this message"
+                  title={t("logging.muteTooltip")}
                 >
                   {entry.Level.toUpperCase()}
                 </button>
-                <span className="overflow-wrap-anywhere">{entry.Message || "(empty message)"}</span>
+                <span className="overflow-wrap-anywhere">
+                  {entry.Message || t("logging.emptyMessage")}
+                </span>
               </div>
             ))
           )}
@@ -439,13 +441,13 @@ export default function LogSettingsPanel({
 
         <div className="grid gap-2">
           <div>
-            <p className="label">Muted patterns</p>
-            <p className="helper">Mute exact message matches.</p>
+            <p className="label">{t("logging.mutedPatterns")}</p>
+            <p className="helper">{t("logging.mutedHelper")}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <input
               className="min-w-[220px] flex-1 rounded-md border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-[var(--text)]"
-              placeholder="Message to mute"
+              placeholder={t("logging.mutePlaceholder")}
               value={pendingMute}
               onChange={(event) => setPendingMute(event.target.value)}
               onKeyDown={(event) => {
@@ -453,11 +455,11 @@ export default function LogSettingsPanel({
               }}
             />
             <button className="ghost" type="button" onClick={handleAddMute}>
-              Add
+              {t("common.add")}
             </button>
           </div>
           {mutedPatterns.length === 0 ? (
-            <p className="muted">No muted patterns.</p>
+            <p className="muted">{t("logging.noMuted")}</p>
           ) : (
             <div className="grid gap-1.5">
               {mutedPatterns.map((pattern) => (
@@ -467,7 +469,7 @@ export default function LogSettingsPanel({
                 >
                   <span>{pattern}</span>
                   <button className="ghost" type="button" onClick={() => handleRemoveMute(pattern)}>
-                    Remove
+                    {t("common.remove")}
                   </button>
                 </div>
               ))}

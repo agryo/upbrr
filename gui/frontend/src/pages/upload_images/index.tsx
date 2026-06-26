@@ -3,6 +3,7 @@
 
 import { useMemo } from "react";
 import type { Dispatch, SetStateAction } from "react";
+import { useTranslation } from "../../i18n";
 import { Button } from "../../components/ui/button";
 import type {
   ScreenshotLinkedImage,
@@ -42,6 +43,8 @@ type Props = Readonly<{
 }>;
 
 export default function UploadImagesPage(props: Props) {
+  const { t } = useTranslation();
+
   const {
     path,
     uploadHost,
@@ -93,7 +96,6 @@ export default function UploadImagesPage(props: Props) {
   const previouslyUploadedByHost: UploadedByHost[] = useMemo(() => {
     const grouped = new Map<string, UploadedImageLink[]>();
 
-    // Add actual uploaded images from database.
     previouslyUploadedImages.forEach((img) => {
       const hostKey = (img.Host || "unknown").trim() || "unknown";
       const bucket = grouped.get(hostKey) || [];
@@ -103,7 +105,6 @@ export default function UploadImagesPage(props: Props) {
 
     const trackerURLs = new Set<string>();
 
-    // Add downloaded tracker images as if they were previously uploaded.
     trackerImageLinks.forEach((link) => {
       if (link.URL) {
         trackerURLs.add(link.URL);
@@ -125,7 +126,6 @@ export default function UploadImagesPage(props: Props) {
       grouped.set(hostKey, bucket);
     });
 
-    // Add remote tracker images even when local artifact download was rejected.
     trackerImageURLs.forEach((url) => {
       if (!url || trackerURLs.has(url)) {
         return;
@@ -172,28 +172,28 @@ export default function UploadImagesPage(props: Props) {
   return (
     <section className="grid gap-3">
       <header className="max-w-3xl">
-        <p className="eyebrow">Image Hosting</p>
-        <h1>Upload Images</h1>
-        <p className="subtitle">
-          Select screenshots and upload to every host needed by the active trackers.
-        </p>
+        <p className="eyebrow">upbrr</p>
+        <h1>{t("uploadImages.title")}</h1>
+        <p className="subtitle">{t("uploadImages.subtitle")}</p>
       </header>
 
       <section className="panel grid gap-2.5">
         <div className="min-w-0">
-          <p className="label">Source path</p>
-          <p className="value [overflow-wrap:anywhere] text-sm">{path || "No path selected"}</p>
+          <p className="label">{t("input.sourcePath")}</p>
+          <p className="value [overflow-wrap:anywhere] text-sm">
+            {path || t("common.noPathSelected")}
+          </p>
         </div>
         <div className="grid items-end gap-3 md:grid-cols-[minmax(220px,1fr)_auto]">
           <label className="settings-field">
-            <span>Default upload host</span>
+            <span>{t("uploadImages.defaultHost")}</span>
             <select
               value={uploadHost}
               onChange={(event) => setUploadHost(event.target.value)}
               disabled={configuredImageHosts.length === 0}
             >
               {configuredImageHosts.length === 0 ? (
-                <option value="">No hosts configured</option>
+                <option value="">{t("uploadImages.noHosts")}</option>
               ) : null}
               {configuredImageHosts.map((host) => (
                 <option key={host} value={host}>
@@ -204,10 +204,10 @@ export default function UploadImagesPage(props: Props) {
           </label>
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" onClick={() => setAllUploadSelections(true)}>
-              Select all
+              {t("common.selectAll")}
             </Button>
             <Button type="button" onClick={() => setAllUploadSelections(false)}>
-              Select none
+              {t("common.selectNone")}
             </Button>
             <Button
               variant="primary"
@@ -215,13 +215,19 @@ export default function UploadImagesPage(props: Props) {
               onClick={() => handleUploadImages(selectedUploadCandidates)}
               disabled={uploadImagesLoading || uploadSelectedCount === 0 || !uploadHost}
             >
-              {uploadImagesLoading ? "Uploading..." : `Upload ${uploadSelectedCount}`}
+              {uploadImagesLoading
+                ? t("uploadImages.uploading")
+                : t("uploadImages.uploadCount", { count: uploadSelectedCount })}
             </Button>
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
-          <span className="muted">Available: {uploadCandidateCount}</span>
-          <span className="muted">Selected: {uploadSelectedCount}</span>
+          <span className="muted">
+            {t("uploadImages.availableCount", { count: uploadCandidateCount })}
+          </span>
+          <span className="muted">
+            {t("uploadImages.selectedCount", { count: uploadSelectedCount })}
+          </span>
         </div>
         {uploadImagesLoading && uploadProgress.total > 0 ? (
           <div className="grid gap-1.5">
@@ -234,7 +240,10 @@ export default function UploadImagesPage(props: Props) {
               />
             </div>
             <p className="m-0 text-center text-sm text-[var(--muted)]">
-              Uploading... {uploadProgress.current} of {uploadProgress.total}
+              {t("uploadImages.uploadingProgress", {
+                current: uploadProgress.current,
+                total: uploadProgress.total,
+              })}
             </p>
           </div>
         ) : null}
@@ -243,10 +252,16 @@ export default function UploadImagesPage(props: Props) {
           <div className="grid gap-1">
             {uploadImageFailures.map((failure, index) => {
               const trackers = (failure.Trackers || []).filter(Boolean);
-              const trackerLabel = trackers.length > 0 ? ` Blocks: ${trackers.join(", ")}.` : "";
+              const trackerLabel =
+                trackers.length > 0
+                  ? ` ${t("uploadImages.failureBlocks", { trackers: trackers.join(", ") })}`
+                  : "";
               return (
                 <p className="error" key={`${failure.Host || "host"}-${index}`}>
-                  {failure.Host || "Image host"} failed: {failure.Message || "upload failed"}.
+                  {t("uploadImages.failureMessage", {
+                    host: failure.Host || t("common.unknown"),
+                    message: failure.Message || t("uploadImages.failureDefault"),
+                  })}
                   {trackerLabel}
                 </p>
               );
@@ -257,13 +272,13 @@ export default function UploadImagesPage(props: Props) {
 
       {uploadCandidateCount === 0 ? (
         <section className="panel">
-          <p className="muted">No screenshots available yet. Generate screenshots first.</p>
+          <p className="muted">{t("uploadImages.noScreenshots")}</p>
         </section>
       ) : (
         <section className="panel grid gap-2.5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2>Available Images</h2>
-            <p className="muted">Click a thumbnail to preview. Toggle to include in upload.</p>
+            <h2>{t("uploadImages.availableTitle")}</h2>
+            <p className="muted">{t("uploadImages.availablePrompt")}</p>
           </div>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-2">
             {uploadCandidates.map((item) => {
@@ -289,16 +304,16 @@ export default function UploadImagesPage(props: Props) {
                     type="button"
                     onClick={() => {
                       setLightboxImage(item.dataUri);
-                      setLightboxAlt("Upload candidate");
+                      setLightboxAlt(t("uploadImages.thumbnailAlt"));
                     }}
                   >
-                    <img src={item.dataUri} alt="Upload candidate" />
+                    <img src={item.dataUri} alt={t("uploadImages.thumbnailAlt")} />
                     {isUploaded ? (
                       <span
                         className="pointer-events-none absolute right-1.5 top-1.5 rounded bg-emerald-800 px-1.5 py-1 text-xs font-semibold text-slate-50"
-                        title={`Already uploaded to ${hostLabel}`}
+                        title={t("uploadImages.alreadyUploaded", { host: hostLabel || "" })}
                       >
-                        Uploaded {hostLabel}
+                        {t("uploadImages.uploadedTag")} {hostLabel}
                       </span>
                     ) : null}
                   </button>
@@ -310,7 +325,7 @@ export default function UploadImagesPage(props: Props) {
                     type="button"
                     onClick={() => pathValue && toggleUploadSelection(pathValue)}
                   >
-                    {selected ? "Selected" : "Select"}
+                    {selected ? t("common.selected") : t("common.select")}
                   </Button>
                   {isUploaded && imgLink ? (
                     <div className="flex justify-center gap-1.5">
@@ -320,10 +335,10 @@ export default function UploadImagesPage(props: Props) {
                         target="_blank"
                         rel="noreferrer"
                         onAuxClick={handleExternalLinkClick}
-                        title="View image"
+                        title={t("uploadImages.viewImage")}
                         onClick={handleExternalLinkClick}
                       >
-                        View
+                        {t("uploadImages.viewImage")}
                       </a>
                     </div>
                   ) : null}
@@ -337,11 +352,8 @@ export default function UploadImagesPage(props: Props) {
       {previouslyUploadedByHost.length > 0 ? (
         <section className="panel grid gap-2.5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2>Previously Uploaded Images</h2>
-            <p className="muted">
-              Images from previous uploads and tracker descriptions. Click delete to remove from
-              database.
-            </p>
+            <h2>{t("uploadImages.prevUploadedTitle")}</h2>
+            <p className="muted">{t("uploadImages.prevUploadedSubtitle")}</p>
           </div>
           <div className="grid gap-3">
             {previouslyUploadedByHost.map((group) => (
@@ -355,8 +367,8 @@ export default function UploadImagesPage(props: Props) {
                       className="grid min-w-0 gap-1 rounded-lg border border-white/10 bg-[rgba(12,16,26,0.78)] p-2 [&_.tracker-link]:[overflow-wrap:anywhere] [&_.value]:[overflow-wrap:anywhere]"
                       key={`prev-uploaded-${img.ImagePath}-${img.Host}-${index}`}
                     >
-                      <p className="label">Image</p>
-                      <p className="value mono">{img.ImagePath || "Unknown"}</p>
+                      <p className="label">{t("uploadImages.imageLabel")}</p>
+                      <p className="value mono">{img.ImagePath || t("common.unknown")}</p>
                       {img.ImgURL ? (
                         <a
                           className="tracker-link"
@@ -366,7 +378,7 @@ export default function UploadImagesPage(props: Props) {
                           onAuxClick={handleExternalLinkClick}
                           onClick={handleExternalLinkClick}
                         >
-                          View image
+                          {t("uploadImages.viewImage")}
                         </a>
                       ) : null}
                       {img.RawURL ? (
@@ -378,7 +390,7 @@ export default function UploadImagesPage(props: Props) {
                           onAuxClick={handleExternalLinkClick}
                           onClick={handleExternalLinkClick}
                         >
-                          Raw URL
+                          {t("uploadImages.rawUrl")}
                         </a>
                       ) : null}
                       {img.WebURL ? (
@@ -390,7 +402,7 @@ export default function UploadImagesPage(props: Props) {
                           onAuxClick={handleExternalLinkClick}
                           onClick={handleExternalLinkClick}
                         >
-                          Web URL
+                          {t("uploadImages.webUrl")}
                         </a>
                       ) : null}
                       {img.SourcePath ? (
@@ -399,7 +411,7 @@ export default function UploadImagesPage(props: Props) {
                           type="button"
                           onClick={() => handleDeleteUploadedImage(img.ImagePath, img.Host)}
                         >
-                          Delete
+                          {t("common.delete")}
                         </button>
                       ) : (
                         <button
@@ -407,7 +419,7 @@ export default function UploadImagesPage(props: Props) {
                           type="button"
                           onClick={() => handleDeleteTrackerImage(img.RawURL || img.ImgURL)}
                         >
-                          Remove
+                          {t("common.remove")}
                         </button>
                       )}
                     </div>
@@ -422,8 +434,8 @@ export default function UploadImagesPage(props: Props) {
       {uploadedImages.length > 0 ? (
         <section className="panel grid gap-2.5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2>Upload Results</h2>
-            <p className="muted">Links returned from the image host.</p>
+            <h2>{t("uploadImages.resultsTitle")}</h2>
+            <p className="muted">{t("uploadImages.resultsSubtitle")}</p>
           </div>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-2">
             {uploadedImages.map((image, index) => (
@@ -431,9 +443,9 @@ export default function UploadImagesPage(props: Props) {
                 className="grid min-w-0 gap-1 rounded-lg border border-white/10 bg-[rgba(12,16,26,0.78)] p-2 [&_.tracker-link]:[overflow-wrap:anywhere] [&_.value]:[overflow-wrap:anywhere]"
                 key={`uploaded-${image.ImagePath}-${index}`}
               >
-                <p className="label">Image</p>
-                <p className="value mono">{image.ImagePath || "Unknown"}</p>
-                <p className="label">Host</p>
+                <p className="label">{t("uploadImages.imageLabel")}</p>
+                <p className="value mono">{image.ImagePath || t("common.unknown")}</p>
+                <p className="label">{t("uploadImages.hostLabel")}</p>
                 <p className="value mono">{image.Host || uploadHost}</p>
                 {image.ImgURL ? (
                   <a
@@ -444,7 +456,7 @@ export default function UploadImagesPage(props: Props) {
                     onAuxClick={handleExternalLinkClick}
                     onClick={handleExternalLinkClick}
                   >
-                    View image
+                    {t("uploadImages.viewImage")}
                   </a>
                 ) : null}
                 {image.RawURL ? (
@@ -456,7 +468,7 @@ export default function UploadImagesPage(props: Props) {
                     onAuxClick={handleExternalLinkClick}
                     onClick={handleExternalLinkClick}
                   >
-                    Raw URL
+                    {t("uploadImages.rawUrl")}
                   </a>
                 ) : null}
                 {image.WebURL ? (
@@ -468,7 +480,7 @@ export default function UploadImagesPage(props: Props) {
                     onAuxClick={handleExternalLinkClick}
                     onClick={handleExternalLinkClick}
                   >
-                    Web URL
+                    {t("uploadImages.webUrl")}
                   </a>
                 ) : null}
                 <button
@@ -478,7 +490,7 @@ export default function UploadImagesPage(props: Props) {
                     handleDeleteUploadedImage(image.ImagePath, image.Host || uploadHost)
                   }
                 >
-                  Delete
+                  {t("common.delete")}
                 </button>
               </div>
             ))}

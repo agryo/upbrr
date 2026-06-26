@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useState } from "react";
+import { useTranslation } from "../../i18n";
 import type { ExternalIDOverrides, ReleaseNameOverrides } from "../../types";
 
 type Props = Readonly<{
@@ -14,6 +15,7 @@ type Props = Readonly<{
 
 export default function MenuImagesPage(props: Props) {
   const { path, overrides, nameOverrides, browseAvailable, onImportComplete } = props;
+  const { t } = useTranslation();
 
   const [menuPaths, setMenuPaths] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
@@ -58,7 +60,7 @@ export default function MenuImagesPage(props: Props) {
     setSuccess(false);
     try {
       const importFn = globalThis.go?.guiapp?.App?.ImportMenuImages;
-      if (!importFn) throw new Error("Import function not available");
+      if (!importFn) throw new Error(t("menuImages.importUnavailable"));
       await importFn(path, overrides, nameOverrides, menuPaths);
       setSuccess(true);
       setMenuPaths([]);
@@ -73,17 +75,15 @@ export default function MenuImagesPage(props: Props) {
   return (
     <section className="menu-images-panel">
       <header className="menu-images-header">
-        <p className="eyebrow">Disc Menus</p>
-        <h1>Menu Images</h1>
-        <p className="subtitle">
-          Select existing menu images from your computer to be uploaded alongside your screenshots.
-        </p>
+        <p className="eyebrow">{t("menuImages.eyebrow")}</p>
+        <h1>{t("menuImages.title")}</h1>
+        <p className="subtitle">{t("menuImages.importSubtitle")}</p>
       </header>
 
       <section className="panel menu-images-controls">
         <div>
-          <p className="label">Source path</p>
-          <p className="value dupe-path">{path || "No path selected"}</p>
+          <p className="label">{t("input.sourcePath")}</p>
+          <p className="value dupe-path">{path || t("common.noPathSelected")}</p>
         </div>
 
         <div className="upload-images-actions" style={{ marginTop: "1rem" }}>
@@ -95,11 +95,11 @@ export default function MenuImagesPage(props: Props) {
                 onClick={handleBrowseImages}
                 disabled={importing}
               >
-                Add images
+                {t("menuImages.addImages")}
               </button>
             </>
           ) : (
-            <p className="muted">Native file browsing is only available locally.</p>
+            <p className="muted">{t("menuImages.nativeBrowsingLocalOnly")}</p>
           )}
 
           <button
@@ -108,7 +108,7 @@ export default function MenuImagesPage(props: Props) {
             onClick={handleImport}
             disabled={importing || menuPaths.length === 0}
           >
-            {importing ? "Importing..." : "Import Images"}
+            {importing ? t("menuImages.importing") : t("menuImages.importButton")}
           </button>
         </div>
 
@@ -122,14 +122,14 @@ export default function MenuImagesPage(props: Props) {
             className="success"
             style={{ marginTop: "1rem", color: "var(--success-color, #22c55e)" }}
           >
-            Images imported successfully! They will appear in the Upload Images tab.
+            {t("menuImages.importSuccess")}
           </p>
         ) : null}
 
         {menuPaths.length > 0 ? (
           <div style={{ marginTop: "1.5rem" }}>
             <p className="label" style={{ marginBottom: "0.5rem" }}>
-              Selected files for import:
+              {t("menuImages.selectedFiles")}
             </p>
             <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
               {menuPaths.map((p) => (
@@ -151,7 +151,7 @@ export default function MenuImagesPage(props: Props) {
                     onClick={() => handleRemoveItem(p)}
                     style={{ padding: "0.25rem 0.5rem", height: "auto", minHeight: "0" }}
                   >
-                    Remove
+                    {t("common.remove")}
                   </button>
                 </li>
               ))}
@@ -159,7 +159,7 @@ export default function MenuImagesPage(props: Props) {
           </div>
         ) : (
           <p className="muted" style={{ marginTop: "1.5rem" }}>
-            No images selected yet.
+            {t("menuImages.noImagesSelected")}
           </p>
         )}
       </section>

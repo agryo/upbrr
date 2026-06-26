@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
+import { useTranslation } from "../../i18n";
 import type { PlaylistInfo } from "../../types";
 
 interface PlaylistSelectionPageProps {
@@ -23,6 +24,7 @@ const PlaylistSelectionPage = ({
   progressLines,
   progressError,
 }: PlaylistSelectionPageProps) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [playlists, setPlaylists] = useState<PlaylistInfo[]>([]);
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
@@ -36,7 +38,7 @@ const PlaylistSelectionPage = ({
       setError("");
       const discover = globalThis.go?.guiapp?.App?.DiscoverPlaylists;
       if (!discover) {
-        throw new Error("DiscoverPlaylists API not available");
+        throw new Error(t("playlist.discoverApiUnavailable"));
       }
       const discovered = await discover(path);
       if (discovered) {
@@ -50,11 +52,11 @@ const PlaylistSelectionPage = ({
         setPlaylists([]);
       }
     } catch (err) {
-      setError(`Failed to discover playlists: ${err instanceof Error ? err.message : String(err)}`);
+      setError(t("playlist.discoverFailed", { error: err instanceof Error ? err.message : String(err) }));
     } finally {
       setLoading(false);
     }
-  }, [path]);
+  }, [path, t]);
 
   useEffect(() => {
     discoverPlaylists();
@@ -100,19 +102,19 @@ const PlaylistSelectionPage = ({
         .map((idx) => playlists[idx].file);
 
       if (selected.length === 0) {
-        setError("Please select at least one playlist");
+        setError(t("playlist.selectAtLeastOne"));
         return;
       }
 
       const saveFn = globalThis.go?.guiapp?.App?.SavePlaylistSelection;
       if (!saveFn) {
-        throw new Error("SavePlaylistSelection API not available");
+        throw new Error(t("playlist.saveApiUnavailable"));
       }
 
       await saveFn(path, selected, useAll);
       await onConfirm();
     } catch (err) {
-      setError(`Failed to save selection: ${err instanceof Error ? err.message : String(err)}`);
+      setError(t("playlist.saveFailed", { error: err instanceof Error ? err.message : String(err) }));
     } finally {
       setSaving(false);
     }
@@ -124,8 +126,8 @@ const PlaylistSelectionPage = ({
     return (
       <div className="mx-auto max-w-2xl p-3">
         <div className="panel">
-          <h2>Discovering Playlists</h2>
-          <p className="muted mt-1 text-sm">Scanning {path} for MPLS files...</p>
+          <h2>{t("playlist.discovering")}</h2>
+          <p className="muted mt-1 text-sm">{t("playlist.scanning", { path })}</p>
         </div>
       </div>
     );
@@ -135,11 +137,11 @@ const PlaylistSelectionPage = ({
     return (
       <div className="mx-auto max-w-2xl p-3">
         <div className="panel">
-          <h2>No Playlists Found</h2>
-          <p className="muted mt-1 text-sm">No MPLS playlists were found in {path}</p>
+          <h2>{t("playlist.notFoundTitle")}</h2>
+          <p className="muted mt-1 text-sm">{t("playlist.notFoundSubtitle", { path })}</p>
           <div className="mt-3 flex justify-end">
             <Button onClick={onBack} type="button">
-              Back
+              {t("common.back")}
             </Button>
           </div>
         </div>
@@ -150,9 +152,9 @@ const PlaylistSelectionPage = ({
   return (
     <div className="mx-auto max-w-2xl p-3">
       <div className="panel">
-        <h2>Select BDMV Playlists</h2>
+        <h2>{t("playlist.title")}</h2>
         <p className="muted mt-1 text-sm [overflow-wrap:anywhere]">
-          Choose which playlists to use for {path}
+          {t("playlist.prompt", { path })}
         </p>
 
         {error ? (
@@ -191,8 +193,8 @@ const PlaylistSelectionPage = ({
                   </label>
                 </div>
                 <span className="ml-6 text-xs text-[var(--muted)]">
-                  {formatDuration(playlist.duration)} • {fileCount} files • {formatBytes(totalSize)}{" "}
-                  • Score: {playlist.score.toFixed(2)}
+                  {formatDuration(playlist.duration)} • {fileCount} {t("playlist.files")} • {formatBytes(totalSize)}{" "}
+                  • {t("playlist.score")}: {playlist.score.toFixed(2)}
                 </span>
               </div>
             );
@@ -202,17 +204,17 @@ const PlaylistSelectionPage = ({
         {playlists.length > 1 ? (
           <div className="my-3 flex flex-wrap gap-2">
             <Button onClick={handleSelectAll} type="button" disabled={saving || displayCount === 0}>
-              {useAll ? "Deselect All" : `Select All Top ${displayCount}`}
+              {useAll ? t("common.deselectAll") : t("playlist.selectAllTop", { count: displayCount })}
             </Button>
             <Button onClick={handleAutoSelect} type="button" disabled={saving}>
-              Auto-Select Best
+              {t("playlist.autoSelectBest")}
             </Button>
           </div>
         ) : null}
 
         <div className="mt-3 flex justify-end gap-2">
           <Button onClick={onBack} type="button" disabled={saving}>
-            Back
+            {t("common.back")}
           </Button>
           <Button
             onClick={handleConfirm}
@@ -220,7 +222,7 @@ const PlaylistSelectionPage = ({
             type="button"
             disabled={saving || selectedIndices.size === 0}
           >
-            {saving ? (preparing ? "Preparing..." : "Saving...") : "Confirm Selection"}
+            {saving ? (preparing ? t("playlist.preparing") : t("playlist.saving")) : t("playlist.confirm")}
           </Button>
         </div>
 
@@ -230,9 +232,9 @@ const PlaylistSelectionPage = ({
             role="status"
             aria-live="polite"
           >
-            <h3 className="mb-1 text-sm font-semibold">BDInfo progress</h3>
+            <h3 className="mb-1 text-sm font-semibold">{t("playlist.progressHeader")}</h3>
             <pre className="m-0 max-h-40 overflow-auto whitespace-pre-wrap text-xs text-[var(--muted)] [overflow-wrap:anywhere]">
-              {progressLines.length > 0 ? progressLines.join("\n") : "Starting BDInfo..."}
+              {progressLines.length > 0 ? progressLines.join("\n") : t("playlist.starting")}
             </pre>
           </div>
         ) : null}

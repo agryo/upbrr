@@ -6,6 +6,7 @@ import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Switch } from "../../components/ui/switch";
 import { TrackerIconImage } from "../../components/ui/tracker-icon";
+import { useTranslation } from "../../i18n";
 import type { DupeCheckSummary } from "../../types";
 import type { TrackerIconCache } from "../../hooks/useTrackerIcons";
 import { trackerIconFor } from "../../hooks/useTrackerIcons";
@@ -59,16 +60,21 @@ export default function DupeCheckPage(props: Readonly<Props>) {
     setDupeIgnore,
   } = props;
 
+  const { t } = useTranslation();
+
   const dupeSummaryNotes = dupeSummary.Notes || [];
   const hasDupeNotes = dupeSummaryNotes.length > 0;
   const hasDupeResults = dupeSummary.Results && dupeSummary.Results.length > 0;
-  const dupeEmptyMessage = hasDupeNotes ? dupeSummaryNotes.join(" ") : "No dupe results yet.";
+  const dupeEmptyMessage = hasDupeNotes ? dupeSummaryNotes.join(" ") : t("dupeCheck.noChecks");
   const showProgress =
     dupeLoading || dupeProgressStatus === "running" || dupeProgressStatus === "queued";
   const progressText =
     dupeTotalCount > 0
-      ? `${Math.min(dupeCompletedCount, dupeTotalCount)}/${dupeTotalCount} trackers complete`
-      : "Preparing tracker search";
+      ? t("dupeCheck.trackersComplete", {
+          current: Math.min(dupeCompletedCount, dupeTotalCount),
+          total: dupeTotalCount,
+        })
+      : t("dupeCheck.preparingSearch");
   const sortedResults = (dupeSummary.Results || []).slice().sort((left, right) => {
     const leftCount = left.Filtered?.length ?? 0;
     const rightCount = right.Filtered?.length ?? 0;
@@ -114,19 +120,19 @@ export default function DupeCheckPage(props: Readonly<Props>) {
   return (
     <section className="flex flex-col gap-3">
       <header className="max-w-3xl">
-        <p className="eyebrow">Dupe Checking</p>
-        <h1>Check Trackers</h1>
-        <p className="subtitle">Scan selected trackers for potential dupes before upload.</p>
+        <p className="eyebrow">{t("dupeCheck.eyebrow")}</p>
+        <h1>{t("dupeCheck.title")}</h1>
+        <p className="subtitle">{t("dupeCheck.subtitle")}</p>
       </header>
 
       <section className="panel flex flex-wrap items-center justify-between gap-3 py-3">
         <div className="min-w-0">
-          <p className="label">Source path</p>
-          <p className="value break-words text-sm">{path || "No path selected"}</p>
+          <p className="label">{t("input.sourcePath")}</p>
+          <p className="value break-words text-sm">{path || t("common.noPathSelected")}</p>
           {hasDupeResults ? (
             <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-[var(--muted)]">
               <span className="font-semibold text-[var(--text)]">
-                Available for upload: {availableTrackers.length}
+                {t("dupeCheck.availableForUpload", { count: availableTrackers.length })}
               </span>
               {availableTrackers.length ? (
                 availableTrackers.map((tracker) => {
@@ -147,9 +153,11 @@ export default function DupeCheckPage(props: Readonly<Props>) {
                   );
                 })
               ) : (
-                <span>No trackers passed.</span>
+                <span>{t("dupeCheck.noTrackersPassed")}</span>
               )}
-              {unavailableCount > 0 ? <span>{unavailableCount} blocked.</span> : null}
+              {unavailableCount > 0 ? (
+                <span>{t("dupeCheck.blocked", { count: unavailableCount })}</span>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -161,13 +169,16 @@ export default function DupeCheckPage(props: Readonly<Props>) {
           disabled={dupeLoading || !path.trim()}
         >
           {dupeLoading
-            ? `Checking ${dupeCompletedCount}/${dupeTotalCount || "?"}...`
-            : "Run dupe check"}
+            ? t("dupeCheck.checkingProgress", {
+                current: dupeCompletedCount,
+                total: dupeTotalCount || "?",
+              })
+            : t("dupeCheck.checkButton")}
         </Button>
       </section>
 
       {showProgress ? (
-        <p className="muted text-sm">Tracker search progress: {progressText}</p>
+        <p className="muted text-sm">{t("dupeCheck.searchProgress", { progress: progressText })}</p>
       ) : null}
 
       {dupeError ? <p className="error">{dupeError}</p> : null}
@@ -185,10 +196,10 @@ export default function DupeCheckPage(props: Readonly<Props>) {
       {hasDupeResults ? (
         <div className="overflow-hidden rounded-lg border border-white/10 bg-[rgba(12,16,26,0.76)]">
           <div className="hidden grid-cols-[minmax(90px,140px)_58px_minmax(0,1fr)_116px] gap-3 border-b border-white/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--muted)] md:grid">
-            <span>Tracker</span>
-            <span>Dupes</span>
-            <span>Matches</span>
-            <span>Action</span>
+            <span>{t("trackerUpload.trackers")}</span>
+            <span>{t("dupeCheck.dupes")}</span>
+            <span>{t("dupeCheck.matches")}</span>
+            <span>{t("dupeCheck.action")}</span>
           </div>
           <div className="divide-y divide-white/10">
             {sortedResults.map((result) => {
@@ -252,20 +263,22 @@ export default function DupeCheckPage(props: Readonly<Props>) {
                   <div className="min-w-0">
                     {hasPathedNote || ruleSkipReason || hasFailure || visibleNotes.length ? (
                       <p className="mb-1 flex flex-wrap items-center gap-1 text-sm leading-5">
-                        {hasPathedNote ? <Badge tone="info">In client</Badge> : null}
+                        {hasPathedNote ? (
+                          <Badge tone="info">{t("dupeCheck.inClient")}</Badge>
+                        ) : null}
 
                         {ruleSkipReason ? (
                           <>
-                            <Badge tone="danger">Rule failed</Badge>
+                            <Badge tone="danger">{t("dupeCheck.ruleFailed")}</Badge>
                             <span className="text-[var(--muted)]">{ruleSkipReason}</span>
                           </>
                         ) : null}
 
                         {hasFailure ? (
                           <>
-                            <Badge tone="danger">Error</Badge>
+                            <Badge tone="danger">{t("common.error")}</Badge>
                             <span className="text-[var(--muted)]">
-                              {result.Error || "Tracker dupe check failed"}
+                              {result.Error || t("dupeCheck.trackerDupeCheckFailed")}
                             </span>
                           </>
                         ) : null}
@@ -308,9 +321,9 @@ export default function DupeCheckPage(props: Readonly<Props>) {
                   <div className="col-span-3 md:col-span-1">
                     {showIgnoreToggle ? (
                       <div className="inline-flex items-center gap-2 text-xs font-semibold text-[var(--text)]">
-                        <span>Ignore</span>
+                        <span>{t("dupeCheck.ignore")}</span>
                         <Switch
-                          aria-label={`Ignore dupes for ${result.Tracker}`}
+                          aria-label={t("dupeCheck.ignoreDupesFor", { tracker: result.Tracker })}
                           checked={dupeIgnore[result.Tracker] ?? false}
                           onChange={(event) =>
                             setDupeIgnore((prev) => ({

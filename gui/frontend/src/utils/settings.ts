@@ -3,7 +3,23 @@
 
 import type { ConfigMap, ConfigValue } from "../types";
 
-export const formatLabel = (value: string) => {
+/**
+ * Formata um label, tentando traduzir com a função fornecida.
+ * Se a tradução não for encontrada, aplica fallback (espaços em camelCase ou underscores).
+ */
+export const formatLabel = (
+  value: string,
+  translate?: (key: string) => string, // <-- recebe a função t como argumento opcional
+): string => {
+  if (translate) {
+    const key = `settings.field_${value}`;
+    const translated = translate(key);
+    if (translated !== key) {
+      return translated;
+    }
+  }
+
+  // fallback
   if (value.includes("_")) {
     return value.replaceAll(/_/g, " ");
   }
@@ -12,6 +28,7 @@ export const formatLabel = (value: string) => {
     .replaceAll(/([A-Z])([A-Z][a-z])/g, "$1 $2");
 };
 
+// As demais funções permanecem iguais
 export const normalizeDefaultTrackerList = (value: ConfigValue): string[] => {
   if (Array.isArray(value)) {
     return value.map((entry) => String(entry ?? "").trim()).filter(Boolean);

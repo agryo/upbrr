@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
+import { useTranslation } from "../../i18n";
 import { Button } from "../../components/ui/button";
 import { PillCheckbox } from "../../components/ui/checkbox";
 import { Switch } from "../../components/ui/switch";
@@ -60,36 +61,37 @@ const filterAndOrderExternalIDs = (info: ExternalIDInfo[]) => {
 
 const normalizeKey = (value: string) => value.toLowerCase().replaceAll(/[^a-z0-9]/g, "");
 
-const imdbTypeLabels: Record<string, string> = {
-  movie: "Movie",
-  tvseries: "TV series",
-  tvminiseries: "TV miniseries",
-  tvepisode: "TV episode",
-  tvmovie: "TV movie",
-  short: "Short",
-  video: "Video",
-  videogame: "Video game",
-};
+// Tipos IMDB com tradução
+const imdbTypeLabels = (t: (key: string) => string): Record<string, string> => ({
+  movie: t("input.imdbTypeMovie"),
+  tvseries: t("input.imdbTypeTVSeries"),
+  tvminiseries: t("input.imdbTypeTVMiniseries"),
+  tvepisode: t("input.imdbTypeTVEpisode"),
+  tvmovie: t("input.imdbTypeTVMovie"),
+  short: t("input.imdbTypeShort"),
+  video: t("input.imdbTypeVideo"),
+  videogame: t("input.imdbTypeVideoGame"),
+});
 
-const formatIMDBType = (value: string) => {
+const formatIMDBType = (value: string, t: (key: string) => string) => {
   if (!value) return "";
   const key = normalizeKey(value);
-  return imdbTypeLabels[key] ?? value;
+  return imdbTypeLabels(t)[key] ?? value;
 };
 
-const formatRuntime = (minutes: number) => {
+const formatRuntime = (minutes: number, t: (key: string) => string) => {
   if (!minutes) return "";
   const hours = Math.floor(minutes / 60);
   const remainder = minutes % 60;
-  if (!hours) return `${minutes} min`;
-  if (!remainder) return `${hours}h`;
-  return `${hours}h ${remainder}m`;
+  if (!hours) return `${minutes} ${t("input.minutesAbbr")}`;
+  if (!remainder) return `${hours}${t("input.hoursAbbr")}`;
+  return `${hours}${t("input.hoursAbbr")} ${remainder}${t("input.minutesAbbr")}`;
 };
 
-const formatRating = (rating: number, count: number) => {
+const formatRating = (rating: number, count: number, t: (key: string) => string) => {
   if (!rating) return "";
   const score = rating.toFixed(1);
-  if (count) return `${score} (${count.toLocaleString()} votes)`;
+  if (count) return `${score} (${count.toLocaleString()} ${t("input.votes")})`;
   return score;
 };
 
@@ -100,7 +102,8 @@ const formatSimilarity = (value: number) => {
   return `${Math.round(value * 100)}%`;
 };
 
-const formatBoolean = (value: boolean) => (value ? "Yes" : "No");
+const formatBoolean = (value: boolean, t: (key: string) => string) =>
+  value ? t("common.yes") : t("common.no");
 
 const tmdbLogoBaseURL = "https://image.tmdb.org/t/p/original/";
 const tmdbLogoSize = 64;
@@ -112,14 +115,14 @@ const normalizeTMDBLogoURL = (path: string) => {
   return `${tmdbLogoBaseURL}${trimmed}`;
 };
 
-const formatNameList = (values?: string[] | null) => {
+const formatNameList = (values?: string[] | null, t?: (key: string) => string) => {
   if (!values || values.length === 0) return "";
   const cleaned = values.map((item) => item?.trim()).filter(Boolean);
   if (cleaned.length === 0) return "";
   return cleaned.join("\n");
 };
 
-const formatCommaList = (values?: string[] | null) => {
+const formatCommaList = (values?: string[] | null, t?: (key: string) => string) => {
   if (!values || values.length === 0) return "";
   const cleaned = values.map((item) => item?.trim()).filter(Boolean);
   if (cleaned.length === 0) return "";
@@ -162,14 +165,14 @@ const pickTVDBText = (
   return originalValue || fallbackValue || englishValue;
 };
 
-const formatPeopleList = (values?: IMDBPerson[] | null) => {
+const formatPeopleList = (values?: IMDBPerson[] | null, t?: (key: string) => string) => {
   if (!values || values.length === 0) return "";
   const cleaned = values.map((item) => item?.Name?.trim()).filter(Boolean);
   if (cleaned.length === 0) return "";
   return cleaned.join("\n");
 };
 
-const formatIMDBAkas = (values?: IMDBAKA[] | null) => {
+const formatIMDBAkas = (values?: IMDBAKA[] | null, t?: (key: string) => string) => {
   if (!values || values.length === 0) return "";
   const lines = values
     .map((item) => {
@@ -195,7 +198,10 @@ const formatIMDBAkas = (values?: IMDBAKA[] | null) => {
   return lines.join("\n");
 };
 
-const formatEditionDetails = (values?: Record<string, IMDBEditionDetail> | null) => {
+const formatEditionDetails = (
+  values?: Record<string, IMDBEditionDetail> | null,
+  t?: (key: string) => string,
+) => {
   if (!values) return "";
   const entries = Object.entries(values);
   if (entries.length === 0) return "";
@@ -206,7 +212,9 @@ const formatEditionDetails = (values?: Record<string, IMDBEditionDetail> | null)
     const attrs = detail.Attributes?.filter(Boolean) ?? [];
     let line = name;
     if (minutes) {
-      line = line ? `${line} (${minutes} min)` : `${minutes} min`;
+      line = line
+        ? `${line} (${minutes} ${t ? t("input.minutesAbbr") : "min"})`
+        : `${minutes} ${t ? t("input.minutesAbbr") : "min"}`;
     }
     if (attrs.length > 0) {
       line = `${line} [${attrs.join(", ")}]`;
@@ -218,7 +226,7 @@ const formatEditionDetails = (values?: Record<string, IMDBEditionDetail> | null)
   return cleaned.join("\n");
 };
 
-const formatReleaseDate = (value?: IMDBReleaseDate) => {
+const formatReleaseDate = (value?: IMDBReleaseDate, t?: (key: string) => string) => {
   if (!value || !value.Year) return "";
   const month = value.Month ? String(value.Month).padStart(2, "0") : "";
   const day = value.Day ? String(value.Day).padStart(2, "0") : "";
@@ -227,7 +235,7 @@ const formatReleaseDate = (value?: IMDBReleaseDate) => {
   return value.Year.toString();
 };
 
-const formatEpisodes = (values?: IMDBEpisode[] | null) => {
+const formatEpisodes = (values?: IMDBEpisode[] | null, t?: (key: string) => string) => {
   if (!values || values.length === 0) return "";
   const lines = values
     .map((item) => {
@@ -247,20 +255,20 @@ const formatEpisodes = (values?: IMDBEpisode[] | null) => {
   return lines.join("\n");
 };
 
-const formatSeasonsSummary = (values?: IMDBSeasonSummary[] | null) => {
+const formatSeasonsSummary = (values?: IMDBSeasonSummary[] | null, t?: (key: string) => string) => {
   if (!values || values.length === 0) return "";
   const lines = values
     .map((item) => {
       const year = item.YearRange || formatNumber(item.Year);
       if (!year) return "";
-      return `Season ${item.Season}: ${year}`;
+      return `${t ? t("input.seasonLabel") : "Season"} ${item.Season}: ${year}`;
     })
     .filter(Boolean);
   if (lines.length === 0) return "";
   return lines.join("\n");
 };
 
-const formatTMDBCountries = (values?: TMDBCountry[] | null) => {
+const formatTMDBCountries = (values?: TMDBCountry[] | null, t?: (key: string) => string) => {
   if (!values || values.length === 0) return "";
   const lines = values.map((item) => item?.Name?.trim()).filter(Boolean);
   if (lines.length === 0) return "";
@@ -318,6 +326,7 @@ const buildNetworkBlocks = (values?: TMDBNetwork[] | null) => {
 const buildPreviewDetails = (
   preview: ExternalPreview,
   tvdbDisplayMode: TVDBDisplayMode,
+  t: (key: string) => string,
 ): DetailItem[] => {
   const baseID: DetailItem = {
     label: `${formatProvider(preview.Provider)} ID`,
@@ -329,38 +338,45 @@ const buildPreviewDetails = (
     const imdb = preview.IMDB;
     return [
       baseID,
-      { label: "IMDb URL", value: imdb?.IMDbURL ?? "", mono: true },
-      { label: "AKA", value: imdb?.AKA ?? "" },
-      { label: "Type", value: formatIMDBType(imdb?.Type ?? preview.IMDBType) },
-      { label: "Year", value: formatNumber(imdb?.Year ?? preview.Year) },
-      { label: "End year", value: formatNumber(imdb?.EndYear ?? 0) },
-      { label: "TV year", value: formatNumber(imdb?.TVYear ?? 0) },
-      { label: "Original language", value: imdb?.OriginalLanguage ?? "" },
-      { label: "Country", value: imdb?.Country ?? preview.Country },
-      { label: "Country list", value: imdb?.CountryList ?? "" },
+      { label: t("input.imdbURL"), value: imdb?.IMDbURL ?? "", mono: true },
+      { label: t("input.aka"), value: imdb?.AKA ?? "" },
+      { label: t("input.type"), value: formatIMDBType(imdb?.Type ?? preview.IMDBType, t) },
+      { label: t("input.year"), value: formatNumber(imdb?.Year ?? preview.Year) },
+      { label: t("input.endYear"), value: formatNumber(imdb?.EndYear ?? 0) },
+      { label: t("input.tvYear"), value: formatNumber(imdb?.TVYear ?? 0) },
+      { label: t("input.originalLanguage"), value: imdb?.OriginalLanguage ?? "" },
+      { label: t("input.country"), value: imdb?.Country ?? preview.Country },
+      { label: t("input.countryList"), value: imdb?.CountryList ?? "" },
       {
-        label: "Rating",
+        label: t("input.rating"),
         value: formatRating(
           imdb?.Rating ?? preview.Rating,
           imdb?.RatingCount ?? preview.RatingCount,
+          t,
         ),
       },
-      { label: "Rating text", value: imdb?.RatingText ?? "" },
-      { label: "Rating count", value: formatNumber(imdb?.RatingCount ?? preview.RatingCount) },
-      { label: "Runtime", value: formatRuntime(imdb?.RuntimeMinutes ?? preview.RuntimeMinutes) },
-      { label: "Runtime text", value: imdb?.RuntimeText ?? "" },
-      { label: "Editions", value: formatCommaList(imdb?.Editions) },
-      { label: "Edition details", value: formatEditionDetails(imdb?.EditionDetails) },
-      { label: "Genres", value: imdb?.Genres ?? preview.Genres },
-      { label: "Sound mixes", value: formatNameList(imdb?.SoundMixes) },
-      { label: "Directors", value: formatPeopleList(imdb?.Directors) },
-      { label: "Creators", value: formatPeopleList(imdb?.Creators) },
-      { label: "Writers", value: formatPeopleList(imdb?.Writers) },
-      { label: "Stars", value: formatPeopleList(imdb?.Stars) },
-      { label: "AKA entries", value: formatIMDBAkas(imdb?.Akas) },
-      { label: "Season summary", value: formatSeasonsSummary(imdb?.SeasonsSummary) },
-      { label: "Episodes", value: formatEpisodes(imdb?.Episodes) },
-      { label: "Cover URL", value: imdb?.Cover ?? preview.PosterURL, mono: true },
+      { label: t("input.ratingText"), value: imdb?.RatingText ?? "" },
+      {
+        label: t("input.ratingCount"),
+        value: formatNumber(imdb?.RatingCount ?? preview.RatingCount),
+      },
+      {
+        label: t("input.runtime"),
+        value: formatRuntime(imdb?.RuntimeMinutes ?? preview.RuntimeMinutes, t),
+      },
+      { label: t("input.runtimeText"), value: imdb?.RuntimeText ?? "" },
+      { label: t("input.editions"), value: formatCommaList(imdb?.Editions) },
+      { label: t("input.editionDetails"), value: formatEditionDetails(imdb?.EditionDetails, t) },
+      { label: t("input.genres"), value: imdb?.Genres ?? preview.Genres },
+      { label: t("input.soundMixes"), value: formatNameList(imdb?.SoundMixes) },
+      { label: t("input.directors"), value: formatPeopleList(imdb?.Directors) },
+      { label: t("input.creators"), value: formatPeopleList(imdb?.Creators) },
+      { label: t("input.writers"), value: formatPeopleList(imdb?.Writers) },
+      { label: t("input.stars"), value: formatPeopleList(imdb?.Stars) },
+      { label: t("input.akaEntries"), value: formatIMDBAkas(imdb?.Akas) },
+      { label: t("input.seasonSummary"), value: formatSeasonsSummary(imdb?.SeasonsSummary, t) },
+      { label: t("input.episodes"), value: formatEpisodes(imdb?.Episodes) },
+      { label: t("input.coverURL"), value: imdb?.Cover ?? preview.PosterURL, mono: true },
     ].filter((item) => item.value || (item.blocks && item.blocks.length > 0));
   }
 
@@ -368,48 +384,62 @@ const buildPreviewDetails = (
     const tmdb = preview.TMDB;
     return [
       baseID,
-      { label: "IMDB ID", value: formatID("imdb", tmdb?.IMDBID ?? preview.IMDBID), mono: true },
-      { label: "TVDB ID", value: formatNumber(tmdb?.TVDBID ?? preview.TVDBID), mono: true },
-      { label: "Original title", value: tmdb?.OriginalTitle ?? preview.OriginalTitle },
-      { label: "Type", value: tmdb?.TMDBType ?? preview.TMDBType },
-      { label: "Category", value: tmdb?.Category ?? preview.Category },
-      { label: "Year", value: formatNumber(tmdb?.Year ?? preview.Year) },
-      { label: "Release date", value: tmdb?.ReleaseDate ?? preview.ReleaseDate },
-      { label: "First air date", value: tmdb?.FirstAirDate ?? preview.FirstAirDate },
-      { label: "Last air date", value: tmdb?.LastAirDate ?? preview.LastAirDate },
-      { label: "Runtime", value: formatRuntime(tmdb?.Runtime ?? preview.Runtime) },
-      { label: "Genres", value: tmdb?.Genres ?? preview.Genres },
-      { label: "Genre IDs", value: tmdb?.GenreIDs ?? "" },
-      { label: "Keywords", value: tmdb?.Keywords ?? preview.Keywords },
-      { label: "YouTube", value: tmdb?.YouTube ?? preview.YouTube },
-      { label: "Certification", value: tmdb?.Certification ?? "" },
-      { label: "Creators", value: formatNameList(tmdb?.Creators) },
-      { label: "Directors", value: formatNameList(tmdb?.Directors) },
-      { label: "Cast", value: formatNameList(tmdb?.Cast) },
-      { label: "Origin countries", value: formatCommaList(tmdb?.OriginCountry) },
       {
-        label: "Production companies",
+        label: t("input.imdbID"),
+        value: formatID("imdb", tmdb?.IMDBID ?? preview.IMDBID),
+        mono: true,
+      },
+      { label: t("input.tvdbID"), value: formatNumber(tmdb?.TVDBID ?? preview.TVDBID), mono: true },
+      { label: t("input.originalTitle"), value: tmdb?.OriginalTitle ?? preview.OriginalTitle },
+      { label: t("input.tmdbType"), value: tmdb?.TMDBType ?? preview.TMDBType },
+      { label: t("input.category"), value: tmdb?.Category ?? preview.Category },
+      { label: t("input.year"), value: formatNumber(tmdb?.Year ?? preview.Year) },
+      { label: t("input.releaseDate"), value: tmdb?.ReleaseDate ?? preview.ReleaseDate },
+      { label: t("input.firstAirDate"), value: tmdb?.FirstAirDate ?? preview.FirstAirDate },
+      { label: t("input.lastAirDate"), value: tmdb?.LastAirDate ?? preview.LastAirDate },
+      { label: t("input.runtime"), value: formatRuntime(tmdb?.Runtime ?? preview.Runtime, t) },
+      { label: t("input.genres"), value: tmdb?.Genres ?? preview.Genres },
+      { label: t("input.genreIDs"), value: tmdb?.GenreIDs ?? "" },
+      { label: t("input.keywords"), value: tmdb?.Keywords ?? preview.Keywords },
+      { label: t("input.youtube"), value: tmdb?.YouTube ?? preview.YouTube },
+      { label: t("input.certification"), value: tmdb?.Certification ?? "" },
+      { label: t("input.creators"), value: formatNameList(tmdb?.Creators) },
+      { label: t("input.directors"), value: formatNameList(tmdb?.Directors) },
+      { label: t("input.cast"), value: formatNameList(tmdb?.Cast) },
+      { label: t("input.originCountries"), value: formatCommaList(tmdb?.OriginCountry) },
+      {
+        label: t("input.productionCompanies"),
         value: "",
         blocks: buildCompanyBlocks(tmdb?.ProductionCompanies),
       },
-      { label: "Production countries", value: formatTMDBCountries(tmdb?.ProductionCountries) },
       {
-        label: "Networks",
+        label: t("input.productionCountries"),
+        value: formatTMDBCountries(tmdb?.ProductionCountries),
+      },
+      {
+        label: t("input.networks"),
         value: "",
         blocks: buildNetworkBlocks(tmdb?.Networks),
       },
-      { label: "Poster URL", value: tmdb?.Poster ?? preview.PosterURL, mono: true },
-      { label: "Poster path", value: tmdb?.TMDBPosterPath ?? "", mono: true },
-      { label: "Backdrop URL", value: tmdb?.Backdrop ?? preview.BackdropURL, mono: true },
-      { label: "Logo URL", value: tmdb?.Logo ?? "", mono: true },
-      { label: "Logo name", value: tmdb?.TMDBLogo ?? "" },
-      { label: "Original language", value: tmdb?.OriginalLanguage ?? preview.OriginalLanguage },
-      { label: "Anime", value: tmdb ? formatBoolean(tmdb.Anime) : "" },
-      { label: "MAL ID", value: formatNumber(tmdb?.MALID ?? 0), mono: true },
-      { label: "Demographic", value: tmdb?.Demographic ?? "" },
-      { label: "Retrieved AKA", value: tmdb?.RetrievedAKA ?? "" },
-      { label: "IMDb mismatch", value: tmdb ? formatBoolean(tmdb.IMDbMismatch) : "" },
-      { label: "Mismatched IMDb ID", value: formatNumber(tmdb?.MismatchedIMDbID ?? 0), mono: true },
+      { label: t("input.posterURL"), value: tmdb?.Poster ?? preview.PosterURL, mono: true },
+      { label: t("input.posterPath"), value: tmdb?.TMDBPosterPath ?? "", mono: true },
+      { label: t("input.backdropURL"), value: tmdb?.Backdrop ?? preview.BackdropURL, mono: true },
+      { label: t("input.logoURL"), value: tmdb?.Logo ?? "", mono: true },
+      { label: t("input.logoName"), value: tmdb?.TMDBLogo ?? "" },
+      {
+        label: t("input.originalLanguage"),
+        value: tmdb?.OriginalLanguage ?? preview.OriginalLanguage,
+      },
+      { label: t("input.anime"), value: tmdb ? formatBoolean(tmdb.Anime, t) : "" },
+      { label: t("input.malID"), value: formatNumber(tmdb?.MALID ?? 0), mono: true },
+      { label: t("input.demographic"), value: tmdb?.Demographic ?? "" },
+      { label: t("input.retrievedAKA"), value: tmdb?.RetrievedAKA ?? "" },
+      { label: t("input.imdbMismatch"), value: tmdb ? formatBoolean(tmdb.IMDbMismatch, t) : "" },
+      {
+        label: t("input.mismatchedIMDbID"),
+        value: formatNumber(tmdb?.MismatchedIMDbID ?? 0),
+        mono: true,
+      },
     ].filter((item) => item.value || (item.blocks && item.blocks.length > 0));
   }
 
@@ -445,22 +475,25 @@ const buildPreviewDetails = (
         : "";
     return [
       baseID,
-      { label: "Name", value: displayName },
-      { label: "Type", value: tvdb?.Type ?? preview.TMDBType },
-      { label: "Status", value: tvdb?.Status ?? "" },
-      { label: "Year", value: formatNumber(tvdb?.Year ?? preview.Year) },
-      { label: "First aired", value: tvdb?.FirstAired ?? preview.FirstAirDate },
-      { label: "Genres", value: tvdb?.Genres ?? preview.Genres },
-      { label: "Network", value: tvdb?.Network ?? "" },
-      { label: "Origin country", value: tvdb?.OriginalCountry ?? preview.Country },
-      { label: "Original language", value: tvdb?.OriginalLanguage ?? preview.OriginalLanguage },
-      { label: "Aliases", value: formatCommaList(tvdb?.Aliases) },
-      { label: "Episode", value: episodeTag },
-      { label: "Episode name", value: displayEpisodeName },
-      { label: "Episode aired", value: tvdb?.EpisodeAired ?? "" },
-      { label: "Episode overview", value: displayEpisodeOverview },
-      { label: "Overview", value: displayOverview },
-      { label: "Poster URL", value: tvdb?.Poster ?? preview.PosterURL, mono: true },
+      { label: t("input.name"), value: displayName },
+      { label: t("input.type"), value: tvdb?.Type ?? preview.TMDBType },
+      { label: t("common.status"), value: tvdb?.Status ?? "" },
+      { label: t("input.year"), value: formatNumber(tvdb?.Year ?? preview.Year) },
+      { label: t("input.firstAired"), value: tvdb?.FirstAired ?? preview.FirstAirDate },
+      { label: t("input.genres"), value: tvdb?.Genres ?? preview.Genres },
+      { label: t("input.network"), value: tvdb?.Network ?? "" },
+      { label: t("input.originCountry"), value: tvdb?.OriginalCountry ?? preview.Country },
+      {
+        label: t("input.originalLanguage"),
+        value: tvdb?.OriginalLanguage ?? preview.OriginalLanguage,
+      },
+      { label: t("input.aliases"), value: formatCommaList(tvdb?.Aliases) },
+      { label: t("input.episode"), value: episodeTag },
+      { label: t("input.episodeName"), value: displayEpisodeName },
+      { label: t("input.episodeAired"), value: tvdb?.EpisodeAired ?? "" },
+      { label: t("input.episodeOverview"), value: displayEpisodeOverview },
+      { label: t("input.overview"), value: displayOverview },
+      { label: t("input.posterURL"), value: tvdb?.Poster ?? preview.PosterURL, mono: true },
     ].filter((item) => item.value || (item.blocks && item.blocks.length > 0));
   }
 
@@ -474,37 +507,46 @@ const buildPreviewDetails = (
       webChannel && tvmaze?.WebCountry ? `${webChannel} - ${tvmaze.WebCountry}` : webChannel;
     return [
       baseID,
-      { label: "IMDB ID", value: formatID("imdb", tvmaze?.IMDBID ?? preview.IMDBID), mono: true },
-      { label: "TVDB ID", value: formatNumber(tvmaze?.TVDBID ?? preview.TVDBID), mono: true },
-      { label: "Name", value: tvmaze?.Name ?? preview.Title },
-      { label: "Type", value: tvmaze?.Type ?? preview.TMDBType },
-      { label: "Status", value: tvmaze?.Status ?? "" },
-      { label: "Year", value: formatNumber(preview.Year) },
-      { label: "Premiered", value: tvmaze?.Premiered ?? preview.Premiered },
-      { label: "Ended", value: tvmaze?.Ended ?? "" },
-      { label: "Genres", value: tvmaze?.Genres ?? preview.Genres },
-      { label: "Language", value: tvmaze?.Language ?? preview.OriginalLanguage },
-      { label: "Country", value: tvmaze?.Country ?? preview.Country },
-      { label: "Runtime", value: formatRuntime(tvmaze?.Runtime ?? preview.Runtime) },
-      { label: "Average runtime", value: formatRuntime(tvmaze?.AverageRuntime ?? 0) },
       {
-        label: "Rating",
+        label: t("input.imdbID"),
+        value: formatID("imdb", tvmaze?.IMDBID ?? preview.IMDBID),
+        mono: true,
+      },
+      {
+        label: t("input.tvdbID"),
+        value: formatNumber(tvmaze?.TVDBID ?? preview.TVDBID),
+        mono: true,
+      },
+      { label: t("input.name"), value: tvmaze?.Name ?? preview.Title },
+      { label: t("input.type"), value: tvmaze?.Type ?? preview.TMDBType },
+      { label: t("common.status"), value: tvmaze?.Status ?? "" },
+      { label: t("input.year"), value: formatNumber(preview.Year) },
+      { label: t("input.premiered"), value: tvmaze?.Premiered ?? preview.Premiered },
+      { label: t("input.ended"), value: tvmaze?.Ended ?? "" },
+      { label: t("input.genres"), value: tvmaze?.Genres ?? preview.Genres },
+      { label: t("input.language"), value: tvmaze?.Language ?? preview.OriginalLanguage },
+      { label: t("input.country"), value: tvmaze?.Country ?? preview.Country },
+      { label: t("input.runtime"), value: formatRuntime(tvmaze?.Runtime ?? preview.Runtime, t) },
+      { label: t("input.averageRuntime"), value: formatRuntime(tvmaze?.AverageRuntime ?? 0, t) },
+      {
+        label: t("input.rating"),
         value: formatRating(
           tvmaze?.Rating ?? preview.Rating,
           tvmaze?.Weight ?? preview.RatingCount,
+          t,
         ),
       },
-      { label: "Score", value: formatNumber(tvmaze?.Weight ?? preview.RatingCount) },
-      { label: "Network", value: networkText },
-      { label: "Web channel", value: webChannelText },
-      { label: "Official site", value: tvmaze?.OfficialSite ?? "", mono: true },
-      { label: "Overview", value: tvmaze?.Summary ?? preview.Overview },
-      { label: "Poster URL", value: tvmaze?.Poster ?? preview.PosterURL, mono: true },
-      { label: "Poster medium", value: tvmaze?.PosterMedium ?? "", mono: true },
-      { label: "Backdrop URL", value: tvmaze?.Backdrop ?? preview.BackdropURL, mono: true },
-      { label: "Backdrop medium", value: tvmaze?.BackdropMedium ?? "", mono: true },
-      { label: "Network logo", value: tvmaze?.NetworkLogo ?? "", mono: true },
-      { label: "Web logo", value: tvmaze?.WebLogo ?? "", mono: true },
+      { label: t("input.score"), value: formatNumber(tvmaze?.Weight ?? preview.RatingCount) },
+      { label: t("input.network"), value: networkText },
+      { label: t("input.webChannel"), value: webChannelText },
+      { label: t("input.officialSite"), value: tvmaze?.OfficialSite ?? "", mono: true },
+      { label: t("input.overview"), value: tvmaze?.Summary ?? preview.Overview },
+      { label: t("input.posterURL"), value: tvmaze?.Poster ?? preview.PosterURL, mono: true },
+      { label: t("input.posterMedium"), value: tvmaze?.PosterMedium ?? "", mono: true },
+      { label: t("input.backdropURL"), value: tvmaze?.Backdrop ?? preview.BackdropURL, mono: true },
+      { label: t("input.backdropMedium"), value: tvmaze?.BackdropMedium ?? "", mono: true },
+      { label: t("input.networkLogo"), value: tvmaze?.NetworkLogo ?? "", mono: true },
+      { label: t("input.webLogo"), value: tvmaze?.WebLogo ?? "", mono: true },
     ].filter((item) => item.value || (item.blocks && item.blocks.length > 0));
   }
 
@@ -610,6 +652,8 @@ type Props = Readonly<{
 }>;
 
 export default function InputPage(props: Props) {
+  const { t } = useTranslation();
+
   const {
     path,
     handleSourcePathChange,
@@ -712,13 +756,13 @@ export default function InputPage(props: Props) {
     const normalized = trimmed.replaceAll("\\", "/");
     const upper = normalized.toUpperCase();
     if (/(^|\/)BDMV(\/|$)/.test(upper)) {
-      return "Bluray disc folder detected (BDMV).";
+      return t("input.blurayDiscHint");
     }
     if (/(^|\/)VIDEO_TS(\/|$)/.test(upper)) {
-      return "DVD disc folder detected (VIDEO_TS).";
+      return t("input.dvdDiscHint");
     }
     return "";
-  }, [path]);
+  }, [path, t]);
 
   const orderedExternalIDs = useMemo(
     () => filterAndOrderExternalIDs(preview.ExternalIDInfo || []),
@@ -839,16 +883,16 @@ export default function InputPage(props: Props) {
   }, [selectedPreview, tvdbDisplayMode]);
 
   const previewDetails = selectedPreview
-    ? buildPreviewDetails(selectedPreview, tvdbDisplayMode)
+    ? buildPreviewDetails(selectedPreview, tvdbDisplayMode, t)
     : [];
 
   const metadataPhaseOrder = [
-    { key: "prepare", label: "Prepare metadata" },
-    { key: "tracker-data", label: "Get tracker data" },
-    { key: "mediainfo-ids", label: "Apply MediaInfo IDs" },
-    { key: "external-ids", label: "Resolve external IDs" },
-    { key: "media-details", label: "Apply media details" },
-    { key: "complete", label: "Complete" },
+    { key: "prepare", label: t("input.phasePrepare") },
+    { key: "tracker-data", label: t("input.phaseTrackerData") },
+    { key: "mediainfo-ids", label: t("input.phaseMediaInfoIDs") },
+    { key: "external-ids", label: t("input.phaseExternalIDs") },
+    { key: "media-details", label: t("input.phaseMediaDetails") },
+    { key: "complete", label: t("input.phaseComplete") },
   ];
 
   const latestMetadataPhase = useMemo(() => {
@@ -863,20 +907,18 @@ export default function InputPage(props: Props) {
   }, [metadataProgressUpdates]);
 
   const metadataStatusLabel = (status: string) => {
-    if (status === "running") return "Running";
-    if (status === "completed") return "Done";
-    if (status === "failed") return "Failed";
-    return "Pending";
+    if (status === "running") return t("input.statusRunning");
+    if (status === "completed") return t("input.statusDone");
+    if (status === "failed") return t("input.statusFailed");
+    return t("input.statusPending");
   };
 
   return (
     <div className="content-stack">
       <header className="hero">
         <p className="eyebrow">upbrr</p>
-        <h1>Build Release Name</h1>
-        <p className="subtitle">
-          Build a release name and preview external metadata before you upload.
-        </p>
+        <h1>{t("input.buildReleaseName")}</h1>
+        <p className="subtitle">{t("input.buildSubtitle")}</p>
       </header>
 
       <section
@@ -891,21 +933,21 @@ export default function InputPage(props: Props) {
                 className="grid gap-1.5 text-sm text-[var(--muted)]"
                 htmlFor="source-lookup-url"
               >
-                <span>Site URL override</span>
+                <span>{t("input.siteURLOverride")}</span>
                 <input
                   id="source-lookup-url"
                   className={compactInputClass}
                   value={sourceLookupURL}
                   onChange={(event) => setSourceLookupURL(event.target.value)}
-                  placeholder="Paste tracker or media URL for ID lookup"
+                  placeholder={t("input.siteURLPlaceholder")}
                 />
                 <span className="text-xs leading-tight text-[var(--muted)]">
-                  Metadata ID and tracker description/image lookup.
+                  {t("input.siteURLHelper")}
                 </span>
               </label>
 
               <div className="grid gap-1.5 text-sm text-[var(--muted)]" ref={sourcePathHistoryRef}>
-                <label htmlFor="source-path">Source path</label>
+                <label htmlFor="source-path">{t("input.sourcePath")}</label>
                 <div className="source-path-input-shell source-path-input-shell--drop-target">
                   <input
                     id="source-path"
@@ -919,7 +961,7 @@ export default function InputPage(props: Props) {
                         setSourcePathHistoryOpen(false);
                       }
                     }}
-                    placeholder="Select a file or folder"
+                    placeholder={t("input.sourcePathPlaceholder")}
                     aria-autocomplete="list"
                     aria-expanded={sourcePathHistoryOpen}
                     aria-haspopup="listbox"
@@ -948,7 +990,7 @@ export default function InputPage(props: Props) {
                   ) : null}
                 </div>
                 <span className="text-xs leading-tight text-[var(--muted)]">
-                  {discHint || "File, disc folder, or Season Pack folder."}
+                  {discHint || t("input.sourcePathHelper")}
                 </span>
               </div>
             </div>
@@ -957,41 +999,40 @@ export default function InputPage(props: Props) {
               {browseAvailable ? (
                 <>
                   <Button type="button" onClick={handleBrowseFile}>
-                    Browse file
+                    {t("input.browseFile")}
                   </Button>
                   <Button type="button" onClick={handleBrowseFolder}>
-                    Browse folder
+                    {t("input.browseFolder")}
                   </Button>
                 </>
               ) : null}
               <Button variant="primary" type="button" onClick={handleFetch} disabled={loading}>
-                {loading ? "Fetching..." : "Fetch metadata"}
+                {loading ? t("input.fetching") : t("input.fetchMetadata")}
               </Button>
             </div>
           </div>
 
           {!browseAvailable ? (
-            <p className="m-0 text-xs text-[var(--muted)]">
-              Native browse is only available from localhost. Remote sessions must enter the server
-              path manually.
-            </p>
+            <p className="m-0 text-xs text-[var(--muted)]">{t("input.nativeBrowseWarning")}</p>
           ) : null}
 
           <div className="flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2">
-            <span className="text-sm font-semibold text-[var(--text)]">Run options</span>
+            <span className="text-sm font-semibold text-[var(--text)]">
+              {t("input.runOptions")}
+            </span>
             <div className="inline-flex items-center gap-2 text-sm text-[var(--text)]">
               <Switch
-                aria-label="Enable debug run"
+                aria-label={t("input.debugRun")}
                 checked={runDebug}
                 onChange={(event) => setRunDebug(event.target.checked)}
               />
-              <span>Debug run</span>
+              <span>{t("input.debugRun")}</span>
             </div>
             <label
               className="inline-flex items-center gap-2 text-sm text-[var(--muted)]"
               htmlFor="run-log-level"
             >
-              <span>Log level</span>
+              <span>{t("input.logLevel")}</span>
               <select
                 id="run-log-level"
                 className={compactInputClass}
@@ -1010,7 +1051,7 @@ export default function InputPage(props: Props) {
             </label>
             {runLogLevelTouched ? (
               <Button type="button" onClick={() => setRunLogLevelTouched(false)}>
-                Reset log level
+                {t("input.resetLogLevel")}
               </Button>
             ) : null}
           </div>
@@ -1023,7 +1064,7 @@ export default function InputPage(props: Props) {
         ))}
         {metadataProgressActive || metadataProgressUpdates.length > 0 ? (
           <div className="metadata-progress">
-            <p className="label">Metadata progress</p>
+            <p className="label">{t("input.metadataProgress")}</p>
             <div className="metadata-progress__list">
               {metadataPhaseOrder.map((phase) => {
                 const state = latestMetadataPhase.get(phase.key);
@@ -1047,12 +1088,12 @@ export default function InputPage(props: Props) {
         {hasPreview ? (
           <div className="summary">
             <div>
-              <p className="label">Tracker used</p>
-              <p className="value">{preview.TrackerName || "No tracker used"}</p>
+              <p className="label">{t("input.trackerUsed")}</p>
+              <p className="value">{preview.TrackerName || t("input.noTrackerUsed")}</p>
             </div>
             <div>
-              <p className="label">Release name</p>
-              <p className="value">{preview.ReleaseName || "No release name yet"}</p>
+              <p className="label">{t("input.releaseName")}</p>
+              <p className="value">{preview.ReleaseName || t("input.noReleaseName")}</p>
             </div>
           </div>
         ) : null}
@@ -1060,18 +1101,16 @@ export default function InputPage(props: Props) {
         {hasPreview && showExternalIDInputUI && !hasResolvedPrimaryExternalID ? (
           <div className="panel">
             <div className="settings-subgroup">
-              <div className="settings-subgroup__title">External ID candidates</div>
-              <p className="muted path-helper">
-                Select a candidate to copy it into ID overrides, then refresh metadata.
-              </p>
+              <div className="settings-subgroup__title">{t("input.externalIDCandidates")}</div>
+              <p className="muted path-helper">{t("input.candidateHelper")}</p>
               {tmdbCandidates.length === 0 && imdbCandidates.length === 0 ? (
-                <p className="muted">No TMDB/IMDB candidates available for this search.</p>
+                <p className="muted">{t("input.noCandidatesAvailable")}</p>
               ) : (
                 <div className="settings-grid">
                   <div>
-                    <p className="label">TMDB</p>
+                    <p className="label">{t("input.tmdb")}</p>
                     {tmdbCandidates.length === 0 ? (
-                      <p className="muted">No TMDB candidates</p>
+                      <p className="muted">{t("input.noTMDBCandidates")}</p>
                     ) : (
                       <div className="tracker-pills">
                         {tmdbCandidates.slice(0, 5).map((candidate) => (
@@ -1081,7 +1120,7 @@ export default function InputPage(props: Props) {
                             className={`ghost candidate-selector ${selectedCandidateID("tmdb") === candidate.ID ? "active" : ""}`}
                             onClick={() => applyCandidateID("tmdb", candidate)}
                           >
-                            {candidate.Title || "(Untitled)"}
+                            {candidate.Title || t("input.untitled")}
                             {candidate.Year ? ` (${candidate.Year})` : ""}
                             {formatSimilarity(candidate.Similarity)
                               ? ` • ${formatSimilarity(candidate.Similarity)}`
@@ -1092,17 +1131,17 @@ export default function InputPage(props: Props) {
                     )}
                     {candidatePreview?.provider === "tmdb" ? (
                       <div className="settings-subgroup candidate-preview">
-                        <p className="label">Selected TMDB candidate</p>
+                        <p className="label">{t("input.selectedTMDBCandidate")}</p>
                         <div className="candidate-preview__header">
                           <div className="candidate-preview__text">
                             <p className="value">
-                              {candidatePreview.candidate.Title || "(Untitled)"}
+                              {candidatePreview.candidate.Title || t("input.untitled")}
                               {candidatePreview.candidate.Year
                                 ? ` (${candidatePreview.candidate.Year})`
                                 : ""}
                             </p>
                             <p className="muted">
-                              {candidatePreview.candidate.Category || "Unknown category"}
+                              {candidatePreview.candidate.Category || t("input.unknownCategory")}
                               {formatSimilarity(candidatePreview.candidate.Similarity)
                                 ? ` • ${formatSimilarity(candidatePreview.candidate.Similarity)}`
                                 : ""}
@@ -1127,15 +1166,15 @@ export default function InputPage(props: Props) {
                           ) : null}
                         </div>
                         <p className="muted">
-                          {candidatePreview.candidate.Overview || "No overview available."}
+                          {candidatePreview.candidate.Overview || t("input.noOverview")}
                         </p>
                       </div>
                     ) : null}
                   </div>
                   <div>
-                    <p className="label">IMDB</p>
+                    <p className="label">{t("input.imdb")}</p>
                     {imdbCandidates.length === 0 ? (
-                      <p className="muted">No IMDB candidates</p>
+                      <p className="muted">{t("input.noIMDBCandidates")}</p>
                     ) : (
                       <div className="tracker-pills">
                         {imdbCandidates.slice(0, 5).map((candidate) => (
@@ -1145,7 +1184,7 @@ export default function InputPage(props: Props) {
                             className={`ghost candidate-selector ${selectedCandidateID("imdb") === candidate.ID ? "active" : ""}`}
                             onClick={() => applyCandidateID("imdb", candidate)}
                           >
-                            {candidate.Title || "(Untitled)"}
+                            {candidate.Title || t("input.untitled")}
                             {candidate.Year ? ` (${candidate.Year})` : ""}
                             {formatSimilarity(candidate.Similarity)
                               ? ` • ${formatSimilarity(candidate.Similarity)}`
@@ -1156,17 +1195,17 @@ export default function InputPage(props: Props) {
                     )}
                     {candidatePreview?.provider === "imdb" ? (
                       <div className="settings-subgroup candidate-preview">
-                        <p className="label">Selected IMDB candidate</p>
+                        <p className="label">{t("input.selectedIMDBCandidate")}</p>
                         <div className="candidate-preview__header">
                           <div className="candidate-preview__text">
                             <p className="value">
-                              {candidatePreview.candidate.Title || "(Untitled)"}
+                              {candidatePreview.candidate.Title || t("input.untitled")}
                               {candidatePreview.candidate.Year
                                 ? ` (${candidatePreview.candidate.Year})`
                                 : ""}
                             </p>
                             <p className="muted">
-                              {candidatePreview.candidate.Category || "Unknown category"}
+                              {candidatePreview.candidate.Category || t("input.unknownCategory")}
                               {formatSimilarity(candidatePreview.candidate.Similarity)
                                 ? ` • ${formatSimilarity(candidatePreview.candidate.Similarity)}`
                                 : ""}
@@ -1191,7 +1230,7 @@ export default function InputPage(props: Props) {
                           ) : null}
                         </div>
                         <p className="muted">
-                          {candidatePreview.candidate.Overview || "No overview available."}
+                          {candidatePreview.candidate.Overview || t("input.noOverview")}
                         </p>
                       </div>
                     ) : null}
@@ -1205,7 +1244,7 @@ export default function InputPage(props: Props) {
                   onClick={handleRefresh}
                   disabled={refreshDisabled}
                 >
-                  {loading ? "Refreshing..." : "Refresh metadata"}
+                  {loading ? t("input.refreshing") : t("input.refreshMetadata")}
                 </button>
               </div>
             </div>
@@ -1216,7 +1255,7 @@ export default function InputPage(props: Props) {
           {hasPreview ? (
             <details className="edit-dropdown tracker-dropdown">
               <summary>
-                <span>Select Trackers</span>
+                <span>{t("input.selectTrackers")}</span>
                 <span className="tracker-summary-count">
                   {selectedTrackerCount}/{trackerUploadItems.length}
                 </span>
@@ -1224,7 +1263,7 @@ export default function InputPage(props: Props) {
               <div className="edit-dropdown__body">
                 <div className="tracker-selection-container">
                   {trackerUploadItems.length === 0 ? (
-                    <p className="muted">No configured tracker entries found.</p>
+                    <p className="muted">{t("input.noTrackersConfigured")}</p>
                   ) : (
                     <div className="tracker-pills">
                       {trackerUploadItems.map((tracker) => {
@@ -1258,67 +1297,65 @@ export default function InputPage(props: Props) {
               </div>
             </details>
           ) : null}
-          {hasPreview ? (
-            <p className="helper edit-helper">Edit external IDs and Release Name attributes.</p>
-          ) : null}
+          {hasPreview ? <p className="helper edit-helper">{t("input.editHelper")}</p> : null}
           {hasPreview ? (
             <details className="edit-dropdown">
-              <summary>Edit Release Details</summary>
+              <summary>{t("input.editReleaseDetails")}</summary>
               <div className="edit-dropdown__body">
                 <div className="settings-subgroup">
-                  <div className="settings-subgroup__title">External IDs</div>
+                  <div className="settings-subgroup__title">{t("input.externalIDs")}</div>
                   <div className="id-editor settings-grid">
                     <div className="settings-field">
-                      <label htmlFor="external-tmdb-id">TMDB ID</label>
+                      <label htmlFor="external-tmdb-id">{t("input.tmdbID")}</label>
                       <input
                         id="external-tmdb-id"
                         value={idEdits.tmdb}
                         onChange={(event) =>
                           setIdEdits((prev) => ({ ...prev, tmdb: event.target.value }))
                         }
-                        placeholder="e.g. 550"
+                        placeholder={t("input.tmdbIDPlaceholder")}
                       />
                     </div>
                     <div className="settings-field">
-                      <label htmlFor="external-imdb-id">IMDB ID</label>
+                      <label htmlFor="external-imdb-id">{t("input.imdbID")}</label>
                       <input
                         id="external-imdb-id"
                         value={idEdits.imdb}
                         onChange={(event) =>
                           setIdEdits((prev) => ({ ...prev, imdb: event.target.value }))
                         }
-                        placeholder="e.g. tt0137523"
+                        placeholder={t("input.imdbIDPlaceholder")}
                       />
                     </div>
                     <div className="settings-field">
-                      <label htmlFor="external-tvdb-id">TVDB ID</label>
+                      <label htmlFor="external-tvdb-id">{t("input.tvdbID")}</label>
                       <input
                         id="external-tvdb-id"
                         value={idEdits.tvdb}
                         onChange={(event) =>
                           setIdEdits((prev) => ({ ...prev, tvdb: event.target.value }))
                         }
-                        placeholder="e.g. 80379"
+                        placeholder={t("input.tvdbIDPlaceholder")}
                       />
                     </div>
                     <div className="settings-field">
-                      <label htmlFor="external-tvmaze-id">TVmaze ID</label>
+                      <label htmlFor="external-tvmaze-id">{t("input.tvmazeID")}</label>
                       <input
                         id="external-tvmaze-id"
                         value={idEdits.tvmaze}
                         onChange={(event) =>
                           setIdEdits((prev) => ({ ...prev, tvmaze: event.target.value }))
                         }
-                        placeholder="e.g. 82"
+                        placeholder={t("input.tvmazeIDPlaceholder")}
                       />
                     </div>
                   </div>
                 </div>
                 <div className="settings-subgroup">
-                  <div className="settings-subgroup__title">Release name overrides</div>
+                  <div className="settings-subgroup__title">{t("input.releaseNameOverrides")}</div>
                   <div className="settings-grid">
                     <div className="settings-field">
-                      <label htmlFor="release-category">Category</label>
+                      <label htmlFor="release-category">{t("input.category")}</label>
                       <input
                         id="release-category"
                         value={releaseEdits?.category || ""}
@@ -1326,11 +1363,11 @@ export default function InputPage(props: Props) {
                           setReleaseEdits((prev) => ({ ...prev, category: event.target.value }));
                           markReleaseTouched("category");
                         }}
-                        placeholder="movie or tv"
+                        placeholder={t("input.categoryPlaceholder")}
                       />
                     </div>
                     <div className="settings-field">
-                      <label htmlFor="release-type">Type</label>
+                      <label htmlFor="release-type">{t("input.type")}</label>
                       <input
                         id="release-type"
                         value={releaseEdits?.type || ""}
@@ -1338,11 +1375,11 @@ export default function InputPage(props: Props) {
                           setReleaseEdits((prev) => ({ ...prev, type: event.target.value }));
                           markReleaseTouched("type");
                         }}
-                        placeholder="remux, encode, webdl"
+                        placeholder={t("input.typePlaceholder")}
                       />
                     </div>
                     <div className="settings-field">
-                      <label htmlFor="release-source">Source</label>
+                      <label htmlFor="release-source">{t("input.source")}</label>
                       <input
                         id="release-source"
                         value={releaseEdits?.source || ""}
@@ -1350,11 +1387,11 @@ export default function InputPage(props: Props) {
                           setReleaseEdits((prev) => ({ ...prev, source: event.target.value }));
                           markReleaseTouched("source");
                         }}
-                        placeholder="BluRay, WEB, DVD"
+                        placeholder={t("input.sourcePlaceholder")}
                       />
                     </div>
                     <div className="settings-field">
-                      <label htmlFor="release-resolution">Resolution</label>
+                      <label htmlFor="release-resolution">{t("input.resolution")}</label>
                       <input
                         id="release-resolution"
                         value={releaseEdits?.resolution || ""}
@@ -1362,11 +1399,11 @@ export default function InputPage(props: Props) {
                           setReleaseEdits((prev) => ({ ...prev, resolution: event.target.value }));
                           markReleaseTouched("resolution");
                         }}
-                        placeholder="2160p"
+                        placeholder={t("input.resolutionPlaceholder")}
                       />
                     </div>
                     <div className="settings-field">
-                      <label htmlFor="release-tag">Tag</label>
+                      <label htmlFor="release-tag">{t("input.tag")}</label>
                       <input
                         id="release-tag"
                         value={releaseEdits?.tag || ""}
@@ -1374,11 +1411,11 @@ export default function InputPage(props: Props) {
                           setReleaseEdits((prev) => ({ ...prev, tag: event.target.value }));
                           markReleaseTouched("tag");
                         }}
-                        placeholder="GROUP"
+                        placeholder={t("input.tagPlaceholder")}
                       />
                     </div>
                     <div className="settings-field">
-                      <label htmlFor="release-service">Service</label>
+                      <label htmlFor="release-service">{t("input.service")}</label>
                       <input
                         id="release-service"
                         value={releaseEdits?.service || ""}
@@ -1386,11 +1423,11 @@ export default function InputPage(props: Props) {
                           setReleaseEdits((prev) => ({ ...prev, service: event.target.value }));
                           markReleaseTouched("service");
                         }}
-                        placeholder="Netflix"
+                        placeholder={t("input.servicePlaceholder")}
                       />
                     </div>
                     <div className="settings-field">
-                      <label htmlFor="release-edition">Edition</label>
+                      <label htmlFor="release-edition">{t("input.edition")}</label>
                       <input
                         id="release-edition"
                         value={releaseEdits?.edition || ""}
@@ -1398,11 +1435,11 @@ export default function InputPage(props: Props) {
                           setReleaseEdits((prev) => ({ ...prev, edition: event.target.value }));
                           markReleaseTouched("edition");
                         }}
-                        placeholder="Director's Cut"
+                        placeholder={t("input.editionPlaceholder")}
                       />
                     </div>
                     <div className="settings-field">
-                      <label htmlFor="release-region">Region</label>
+                      <label htmlFor="release-region">{t("input.region")}</label>
                       <input
                         id="release-region"
                         value={releaseEdits?.region || ""}
@@ -1410,11 +1447,11 @@ export default function InputPage(props: Props) {
                           setReleaseEdits((prev) => ({ ...prev, region: event.target.value }));
                           markReleaseTouched("region");
                         }}
-                        placeholder="A, B, C"
+                        placeholder={t("input.regionPlaceholder")}
                       />
                     </div>
                     <div className="settings-field">
-                      <label htmlFor="release-season">Season</label>
+                      <label htmlFor="release-season">{t("input.season")}</label>
                       <input
                         id="release-season"
                         value={releaseEdits?.season || ""}
@@ -1422,11 +1459,11 @@ export default function InputPage(props: Props) {
                           setReleaseEdits((prev) => ({ ...prev, season: event.target.value }));
                           markReleaseTouched("season");
                         }}
-                        placeholder="S01"
+                        placeholder={t("input.seasonPlaceholder")}
                       />
                     </div>
                     <div className="settings-field">
-                      <label htmlFor="release-episode">Episode</label>
+                      <label htmlFor="release-episode">{t("input.episode")}</label>
                       <input
                         id="release-episode"
                         value={releaseEdits?.episode || ""}
@@ -1434,11 +1471,11 @@ export default function InputPage(props: Props) {
                           setReleaseEdits((prev) => ({ ...prev, episode: event.target.value }));
                           markReleaseTouched("episode");
                         }}
-                        placeholder="E02"
+                        placeholder={t("input.episodePlaceholder")}
                       />
                     </div>
                     <div className="settings-field">
-                      <label htmlFor="release-episode-title">Episode title</label>
+                      <label htmlFor="release-episode-title">{t("input.episodeTitle")}</label>
                       <input
                         id="release-episode-title"
                         value={releaseEdits?.episodeTitle || ""}
@@ -1449,11 +1486,11 @@ export default function InputPage(props: Props) {
                           }));
                           markReleaseTouched("episodeTitle");
                         }}
-                        placeholder="Pilot"
+                        placeholder={t("input.episodeTitlePlaceholder")}
                       />
                     </div>
                     <div className="settings-field">
-                      <label htmlFor="release-manual-year">Manual year</label>
+                      <label htmlFor="release-manual-year">{t("input.manualYear")}</label>
                       <input
                         id="release-manual-year"
                         type="number"
@@ -1462,11 +1499,11 @@ export default function InputPage(props: Props) {
                           setReleaseEdits((prev) => ({ ...prev, manualYear: event.target.value }));
                           markReleaseTouched("manualYear");
                         }}
-                        placeholder="2024"
+                        placeholder={t("input.manualYearPlaceholder")}
                       />
                     </div>
                     <div className="settings-field">
-                      <label htmlFor="release-manual-date">Manual date</label>
+                      <label htmlFor="release-manual-date">{t("input.manualDate")}</label>
                       <input
                         id="release-manual-date"
                         value={releaseEdits?.manualDate || ""}
@@ -1474,14 +1511,14 @@ export default function InputPage(props: Props) {
                           setReleaseEdits((prev) => ({ ...prev, manualDate: event.target.value }));
                           markReleaseTouched("manualDate");
                         }}
-                        placeholder="YYYY-MM-DD"
+                        placeholder={t("input.manualDatePlaceholder")}
                       />
                     </div>
                     {isTVEpisodePreview ? (
                       <div className="settings-toggle">
-                        <span>Use season/episode instead</span>
+                        <span>{t("input.useSeasonEpisode")}</span>
                         <Switch
-                          aria-label="Use season/episode instead"
+                          aria-label={t("input.useSeasonEpisode")}
                           checked={Boolean(releaseEdits?.useSeasonEpisode)}
                           onChange={(event) => {
                             setReleaseEdits((prev) => ({
@@ -1496,12 +1533,12 @@ export default function InputPage(props: Props) {
                   </div>
                 </div>
                 <div className="settings-subgroup">
-                  <div className="settings-subgroup__title">Flags</div>
+                  <div className="settings-subgroup__title">{t("input.flags")}</div>
                   <div className="settings-grid">
                     <div className="settings-toggle">
-                      <span>No season</span>
+                      <span>{t("input.noSeason")}</span>
                       <Switch
-                        aria-label="No season"
+                        aria-label={t("input.noSeason")}
                         checked={Boolean(releaseEdits?.noSeason)}
                         onChange={(event) => {
                           setReleaseEdits((prev) => ({ ...prev, noSeason: event.target.checked }));
@@ -1510,9 +1547,9 @@ export default function InputPage(props: Props) {
                       />
                     </div>
                     <div className="settings-toggle">
-                      <span>No year</span>
+                      <span>{t("input.noYear")}</span>
                       <Switch
-                        aria-label="No year"
+                        aria-label={t("input.noYear")}
                         checked={Boolean(releaseEdits?.noYear)}
                         onChange={(event) => {
                           setReleaseEdits((prev) => ({ ...prev, noYear: event.target.checked }));
@@ -1521,9 +1558,9 @@ export default function InputPage(props: Props) {
                       />
                     </div>
                     <div className="settings-toggle">
-                      <span>No AKA</span>
+                      <span>{t("input.noAKA")}</span>
                       <Switch
-                        aria-label="No AKA"
+                        aria-label={t("input.noAKA")}
                         checked={Boolean(releaseEdits?.noAKA)}
                         onChange={(event) => {
                           setReleaseEdits((prev) => ({ ...prev, noAKA: event.target.checked }));
@@ -1532,9 +1569,9 @@ export default function InputPage(props: Props) {
                       />
                     </div>
                     <div className="settings-toggle">
-                      <span>No tag</span>
+                      <span>{t("input.noTag")}</span>
                       <Switch
-                        aria-label="No tag"
+                        aria-label={t("input.noTag")}
                         checked={Boolean(releaseEdits?.noTag)}
                         onChange={(event) => {
                           setReleaseEdits((prev) => ({ ...prev, noTag: event.target.checked }));
@@ -1543,9 +1580,9 @@ export default function InputPage(props: Props) {
                       />
                     </div>
                     <div className="settings-toggle">
-                      <span>No edition</span>
+                      <span>{t("input.noEdition")}</span>
                       <Switch
-                        aria-label="No edition"
+                        aria-label={t("input.noEdition")}
                         checked={Boolean(releaseEdits?.noEdition)}
                         onChange={(event) => {
                           setReleaseEdits((prev) => ({ ...prev, noEdition: event.target.checked }));
@@ -1554,9 +1591,9 @@ export default function InputPage(props: Props) {
                       />
                     </div>
                     <div className="settings-toggle">
-                      <span>No dub</span>
+                      <span>{t("input.noDub")}</span>
                       <Switch
-                        aria-label="No dub"
+                        aria-label={t("input.noDub")}
                         checked={Boolean(releaseEdits?.noDub)}
                         onChange={(event) => {
                           setReleaseEdits((prev) => ({ ...prev, noDub: event.target.checked }));
@@ -1565,9 +1602,9 @@ export default function InputPage(props: Props) {
                       />
                     </div>
                     <div className="settings-toggle">
-                      <span>No dual-audio</span>
+                      <span>{t("input.noDual")}</span>
                       <Switch
-                        aria-label="No dual-audio"
+                        aria-label={t("input.noDual")}
                         checked={Boolean(releaseEdits?.noDual)}
                         onChange={(event) => {
                           setReleaseEdits((prev) => ({ ...prev, noDual: event.target.checked }));
@@ -1576,9 +1613,9 @@ export default function InputPage(props: Props) {
                       />
                     </div>
                     <div className="settings-toggle">
-                      <span>Force dual-audio</span>
+                      <span>{t("input.forceDual")}</span>
                       <Switch
-                        aria-label="Force dual-audio"
+                        aria-label={t("input.forceDual")}
                         checked={Boolean(releaseEdits?.dualAudio)}
                         onChange={(event) => {
                           setReleaseEdits((prev) => ({ ...prev, dualAudio: event.target.checked }));
@@ -1589,14 +1626,10 @@ export default function InputPage(props: Props) {
                   </div>
                 </div>
                 {idOverrideState?.invalid ? (
-                  <p className="error">
-                    Enter numeric IDs only. IMDb supports an optional tt prefix.
-                  </p>
+                  <p className="error">{t("input.idOverrideError")}</p>
                 ) : null}
                 {releaseOverrideState?.invalid ? (
-                  <p className="error">
-                    Manual year must be numeric and manual date must be YYYY-MM-DD.
-                  </p>
+                  <p className="error">{t("input.releaseOverrideError")}</p>
                 ) : null}
                 <div className="edit-actions">
                   <button
@@ -1605,7 +1638,7 @@ export default function InputPage(props: Props) {
                     onClick={handleResetMetadata}
                     disabled={loading}
                   >
-                    {metadataResetting ? "Resetting..." : "Reset data + refresh"}
+                    {metadataResetting ? t("input.resetting") : t("input.resetDataRefresh")}
                   </button>
                   <button
                     className="primary"
@@ -1613,7 +1646,7 @@ export default function InputPage(props: Props) {
                     onClick={handleRefresh}
                     disabled={refreshDisabled}
                   >
-                    {loading ? "Refreshing..." : "Refresh metadata"}
+                    {loading ? t("input.refreshing") : t("input.refreshMetadata")}
                   </button>
                 </div>
               </div>
@@ -1623,9 +1656,9 @@ export default function InputPage(props: Props) {
 
         <div className={`details ${hasPreview ? "loaded" : ""}`}>
           <div className="id-list">
-            <h2>External IDs</h2>
+            <h2>{t("input.externalIDs")}</h2>
             {orderedExternalIDs.length === 0 ? (
-              <p className="muted">No external metadata details found.</p>
+              <p className="muted">{t("input.noExternalDetails")}</p>
             ) : (
               orderedExternalIDs.map((item) => (
                 <button
@@ -1636,7 +1669,9 @@ export default function InputPage(props: Props) {
                 >
                   <span className="id-label">{formatProvider(item.Provider)}</span>
                   <span className="id-value">{formatID(item.Provider, item.ID)}</span>
-                  <span className="id-source">Source: {item.Source}</span>
+                  <span className="id-source">
+                    {t("input.sourceLabel")}: {item.Source}
+                  </span>
                 </button>
               ))
             )}
@@ -1645,7 +1680,7 @@ export default function InputPage(props: Props) {
           <div className="preview-panel">
             <div className="preview-header">
               <div>
-                <h2>Preview</h2>
+                <h2>{t("input.preview")}</h2>
               </div>
               {selectedPreview?.Provider === "tvdb" && tvdbToggleEnabled ? (
                 <fieldset className="preview-language-toggle" aria-label="TVDB language display">
@@ -1654,14 +1689,14 @@ export default function InputPage(props: Props) {
                     type="button"
                     onClick={() => setTVDBDisplayMode("original")}
                   >
-                    Original
+                    {t("input.original")}
                   </button>
                   <button
                     className={`ghost ${tvdbDisplayMode === "english" ? "toggle-active" : ""}`}
                     type="button"
                     onClick={() => setTVDBDisplayMode("english")}
                   >
-                    English
+                    {t("input.english")}
                   </button>
                 </fieldset>
               ) : null}
@@ -1669,9 +1704,9 @@ export default function InputPage(props: Props) {
             {selectedPreview ? (
               <div className="preview-content">
                 <div className="preview-text">
-                  <p className="title">{selectedPreviewTitle || "Untitled"}</p>
+                  <p className="title">{selectedPreviewTitle || t("input.untitled")}</p>
                   <p className="meta">{selectedPreview.Year ? `${selectedPreview.Year}` : ""}</p>
-                  <p className="overview">{selectedPreviewOverview || "No overview available."}</p>
+                  <p className="overview">{selectedPreviewOverview || t("input.noOverview")}</p>
                   {previewDetails.length > 0 ? (
                     <div className="preview-details">
                       {previewDetails.map((item) => (
@@ -1695,7 +1730,7 @@ export default function InputPage(props: Props) {
                 </div>
               </div>
             ) : (
-              <p className="muted">Select an external ID to preview.</p>
+              <p className="muted">{t("input.selectExternalID")}</p>
             )}
           </div>
         </div>

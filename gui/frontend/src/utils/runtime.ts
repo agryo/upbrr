@@ -3,6 +3,10 @@
 
 import { EventsOn as wailsEventsOn } from "../../wailsjs/runtime/runtime";
 
+export function getSessionChangedMessage(t: (key: string) => string) {
+  return t("runtime.sessionChanged");
+}
+
 type EventCallback = (payload: unknown) => void;
 
 const callbackMap = new Map<string, Set<EventCallback>>();

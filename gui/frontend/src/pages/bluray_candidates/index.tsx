@@ -1,6 +1,7 @@
 // Copyright (c) 2025-2026, Audionut and the autobrr contributors.
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import { useTranslation } from "../../i18n";
 import type { BlurayReleaseCandidate, MetadataPreview } from "../../types";
 import { handleExternalLinkClick } from "../../utils/externalLinks";
 
@@ -17,6 +18,7 @@ const scoreLabel = (candidate: BlurayReleaseCandidate) => `${candidate.Score.toF
 
 export default function BlurayCandidatesPage(props: Props) {
   const { preview, selecting, error, onSelect, setLightboxImage, setLightboxAlt } = props;
+  const { t } = useTranslation();
   const bluray = preview.Bluray;
   const candidates = bluray?.Candidates || [];
   const selectedID = bluray?.SelectedReleaseID || "";
@@ -24,35 +26,35 @@ export default function BlurayCandidatesPage(props: Props) {
   return (
     <section className="flex flex-col gap-3">
       <header className="max-w-3xl">
-        <p className="eyebrow">Blu-ray.com</p>
-        <h1>Release Candidates</h1>
-        <p className="subtitle">Best accepted match loads by score; select another release here.</p>
+        <p className="eyebrow">{t("bluray.eyebrow")}</p>
+        <h1>{t("bluray.title")}</h1>
+        <p className="subtitle">{t("bluray.subtitle")}</p>
       </header>
 
       {error ? <p className="error">{error}</p> : null}
 
       {!bluray ? (
         <section className="panel">
-          <p className="muted">No Blu-ray.com lookup data available.</p>
+          <p className="muted">{t("bluray.noCandidates", { path: "" })}</p>
         </section>
       ) : (
         <>
           <section className="panel grid gap-2 py-3">
             <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
               <div>
-                <p className="label">Best score</p>
+                <p className="label">{t("bluray.bestScore")}</p>
                 <p className="value">{bluray.BestScore.toFixed(1)}</p>
               </div>
               <div>
-                <p className="label">Required score</p>
+                <p className="label">{t("bluray.requiredScore")}</p>
                 <p className="value">{bluray.Threshold.toFixed(1)}</p>
               </div>
               <div>
-                <p className="label">Auto-selected</p>
-                <p className="value">{bluray.AutoSelected ? "Yes" : "No"}</p>
+                <p className="label">{t("bluray.autoSelected")}</p>
+                <p className="value">{bluray.AutoSelected ? t("common.yes") : t("common.no")}</p>
               </div>
               <div>
-                <p className="label">Candidates</p>
+                <p className="label">{t("bluray.candidates")}</p>
                 <p className="value">{candidates.length}</p>
               </div>
             </div>
@@ -65,7 +67,7 @@ export default function BlurayCandidatesPage(props: Props) {
                 onAuxClick={handleExternalLinkClick}
                 onClick={handleExternalLinkClick}
               >
-                Open search
+                {t("bluray.openSearch")}
               </a>
             ) : null}
             {!selectedID && bluray.SelectionReason ? (
@@ -77,7 +79,7 @@ export default function BlurayCandidatesPage(props: Props) {
 
           {candidates.length === 0 ? (
             <section className="panel">
-              <p className="muted">No release candidates found.</p>
+              <p className="muted">{t("input.noCandidates")}</p>
             </section>
           ) : (
             <div className="grid gap-3">
@@ -104,29 +106,29 @@ export default function BlurayCandidatesPage(props: Props) {
                           if (hasReleaseID) onSelect(candidate.ReleaseID);
                         }}
                       >
-                        {selected ? "Selected" : selecting ? "Selecting..." : "Select"}
+                        {selected ? t("bluray.selected") : selecting ? t("bluray.selecting") : t("bluray.select")}
                       </button>
                     </div>
 
                     <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-2">
                       <div>
-                        <p className="label">Score</p>
+                        <p className="label">{t("bluray.score")}</p>
                         <p className="value">{scoreLabel(candidate)}</p>
                       </div>
                       <div>
-                        <p className="label">Country</p>
+                        <p className="label">{t("bluray.country")}</p>
                         <p className="value">{candidate.Country || "-"}</p>
                       </div>
                       <div>
-                        <p className="label">Region</p>
+                        <p className="label">{t("bluray.region")}</p>
                         <p className="value">{candidate.Region || "-"}</p>
                       </div>
                       <div>
-                        <p className="label">Publisher</p>
+                        <p className="label">{t("bluray.publisher")}</p>
                         <p className="value">{candidate.Publisher || "-"}</p>
                       </div>
                       <div>
-                        <p className="label">Disc</p>
+                        <p className="label">{t("bluray.disc")}</p>
                         <p className="value">{candidate.Specs?.Discs?.Format || "-"}</p>
                       </div>
                     </div>
@@ -140,13 +142,13 @@ export default function BlurayCandidatesPage(props: Props) {
                         onAuxClick={handleExternalLinkClick}
                         onClick={handleExternalLinkClick}
                       >
-                        Open release
+                        {t("bluray.openRelease")}
                       </a>
                     ) : null}
 
                     <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-2">
                       <div>
-                        <p className="label">Video</p>
+                        <p className="label">{t("bluray.video")}</p>
                         <p className="value">
                           {[candidate.Specs?.Video?.Codec, candidate.Specs?.Video?.Resolution]
                             .filter(Boolean)
@@ -154,13 +156,13 @@ export default function BlurayCandidatesPage(props: Props) {
                         </p>
                       </div>
                       <div>
-                        <p className="label">Audio</p>
+                        <p className="label">{t("bluray.audio")}</p>
                         <p className="value [overflow-wrap:anywhere]">
                           {(candidate.Specs?.Audio || []).slice(0, 3).join("; ") || "-"}
                         </p>
                       </div>
                       <div>
-                        <p className="label">Subtitles</p>
+                        <p className="label">{t("bluray.subtitles")}</p>
                         <p className="value [overflow-wrap:anywhere]">
                           {(candidate.Specs?.Subtitles || []).slice(0, 6).join(", ") || "-"}
                         </p>
@@ -169,7 +171,7 @@ export default function BlurayCandidatesPage(props: Props) {
 
                     {candidate.MatchNotes?.length ? (
                       <div>
-                        <p className="label">Score notes</p>
+                        <p className="label">{t("bluray.scoreNotes")}</p>
                         <p className="value [overflow-wrap:anywhere]">
                           {candidate.MatchNotes.slice(0, 5).join(" | ")}
                         </p>
@@ -191,7 +193,7 @@ export default function BlurayCandidatesPage(props: Props) {
                             <img
                               className="w-full rounded-md border border-white/10"
                               src={image.URL}
-                              alt={image.Kind || "Blu-ray cover"}
+                              alt={image.Kind || t("bluray.coverImage")}
                               loading="lazy"
                             />
                           </button>

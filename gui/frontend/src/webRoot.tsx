@@ -3,6 +3,7 @@
 
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "./i18n";
 import App from "./app";
 import { Checkbox } from "./components/ui/checkbox";
 import {
@@ -37,6 +38,7 @@ const initialStatus: AuthStatus = {
 };
 
 export default function WebRoot() {
+  const { t, ready } = useTranslation();
   const browserMode = isBrowserMode();
   const [status, setStatus] = useState<AuthStatus | null>(null);
   const [username, setUsername] = useState("");
@@ -66,16 +68,25 @@ export default function WebRoot() {
         );
       })
       .catch((err) => {
-        setError(String(err));
+        const message = err instanceof Error ? err.message : String(err);
+        setError(`${t("common.error")}: ${message}`);
         setStatus(initialStatus);
         initializeBrowserBridge("", false);
       });
-  }, [browserMode]);
+  }, [browserMode, t]);
+
+  if (!ready) {
+    return (
+      <div className="web-auth-shell">
+        <div className="web-auth-card">{"webRoot.loading"}</div>
+      </div>
+    );
+  }
 
   if (status === null) {
     return (
       <div className="web-auth-shell">
-        <div className="web-auth-card">Loading web UI...</div>
+        <div className="web-auth-card">{t("webRoot.loading")}</div>
       </div>
     );
   }
@@ -105,7 +116,8 @@ export default function WebRoot() {
           !!next.caseInsensitivePaths,
         );
       } catch (err) {
-        setError(String(err));
+        const message = err instanceof Error ? err.message : String(err);
+        setError(`${t("common.error")}: ${message}`);
       } finally {
         setSubmitting(false);
       }
@@ -115,20 +127,17 @@ export default function WebRoot() {
       return (
         <div className="web-auth-shell">
           <div className="web-auth-card">
-            <p className="web-auth-card__eyebrow">upbrr Web</p>
-            <h1>Set Browse Access</h1>
-            <p className="web-auth-card__copy">
-              Choose the host directories this web UI can browse, or explicitly allow unrestricted
-              host browsing. Separate multiple paths with commas.
-            </p>
+            <p className="web-auth-card__eyebrow">{t("webRoot.upbrrWeb")}</p>
+            <h1>{t("webRoot.setBrowseAccess")}</h1>
+            <p className="web-auth-card__copy">{t("webRoot.browsePolicySubtitle")}</p>
             <form onSubmit={submitBrowsePolicy}>
               <label>
-                <span>Browse root</span>
+                <span>{t("webRoot.browseRoot")}</span>
                 <input
                   value={browseRoot}
                   onChange={(event) => setBrowseRoot(event.target.value)}
                   disabled={allowUnrestrictedBrowse}
-                  placeholder="D:\\Media, E:\\Downloads"
+                  placeholder={t("webRoot.browseRootPlaceholder")}
                 />
               </label>
               <div className="web-auth-card__checkbox">
@@ -137,14 +146,16 @@ export default function WebRoot() {
                   checked={allowUnrestrictedBrowse}
                   onCheckedChange={setAllowUnrestrictedBrowse}
                 />
-                <label htmlFor="allow-unrestricted-browse">Allow unrestricted host browsing</label>
+                <label htmlFor="allow-unrestricted-browse">
+                  {t("webRoot.allowUnrestrictedBrowse")}
+                </label>
               </div>
               {error ? <p className="web-auth-card__error">{error}</p> : null}
               <button
                 type="submit"
                 disabled={submitting || (!allowUnrestrictedBrowse && !browseRoot.trim())}
               >
-                {submitting ? "Saving..." : "Continue"}
+                {submitting ? t("webRoot.saving") : t("webRoot.continue")}
               </button>
             </form>
           </div>
@@ -165,7 +176,7 @@ export default function WebRoot() {
               window.location.reload();
             }}
           >
-            Logout
+            {t("webRoot.logout")}
           </button>
         </div>
         <App />
@@ -195,7 +206,8 @@ export default function WebRoot() {
         !!next.caseInsensitivePaths,
       );
     } catch (err) {
-      setError(String(err));
+      const message = err instanceof Error ? err.message : String(err);
+      setError(`${t("common.error")}: ${message}`);
     } finally {
       setSubmitting(false);
     }
@@ -204,16 +216,14 @@ export default function WebRoot() {
   return (
     <div className="web-auth-shell">
       <div className="web-auth-card">
-        <p className="web-auth-card__eyebrow">upbrr Web</p>
-        <h1>{status.needsSetup ? "Create Admin Account" : "Sign In"}</h1>
+        <p className="web-auth-card__eyebrow">{t("webRoot.upbrrWeb")}</p>
+        <h1>{status.needsSetup ? t("webRoot.setupTitle") : t("webRoot.loginTitle")}</h1>
         <p className="web-auth-card__copy">
-          {status.needsSetup
-            ? "Set up the single-user web account for this instance."
-            : "Authenticate to access the local web workflow."}
+          {status.needsSetup ? t("webRoot.setupSubtitle") : t("webRoot.authSubtitle")}
         </p>
         <form onSubmit={submit}>
           <label>
-            <span>Username</span>
+            <span>{t("webRoot.username")}</span>
             <input
               value={username}
               onChange={(event) => setUsername(event.target.value)}
@@ -221,7 +231,7 @@ export default function WebRoot() {
             />
           </label>
           <label>
-            <span>Password</span>
+            <span>{t("webRoot.password")}</span>
             <input
               type="password"
               value={password}
@@ -231,11 +241,15 @@ export default function WebRoot() {
           </label>
           <div className="web-auth-card__checkbox">
             <Checkbox id="retain-login" checked={retainLogin} onCheckedChange={setRetainLogin} />
-            <label htmlFor="retain-login">Keep me signed in on this device</label>
+            <label htmlFor="retain-login">{t("webRoot.retainLogin")}</label>
           </div>
           {error ? <p className="web-auth-card__error">{error}</p> : null}
           <button type="submit" disabled={submitting || !username.trim() || !password.trim()}>
-            {submitting ? "Working..." : status.needsSetup ? "Create Account" : "Sign In"}
+            {submitting
+              ? t("webRoot.working")
+              : status.needsSetup
+                ? t("webRoot.createAccount")
+                : t("webRoot.signIn")}
           </button>
         </form>
       </div>
